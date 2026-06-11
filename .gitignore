@@ -27,3 +27,4 @@ airflow.db
 .vscode/
 .idea/
 .DS_Store
+data/
