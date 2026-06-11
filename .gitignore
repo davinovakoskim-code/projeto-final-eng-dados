@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+env/
+
+# Dados (NUNCA versionar - são gerados rodando o código)
+data/
+*.csv
+*.json
+*.parquet
+spark-warehouse/
+
+# Delta / Spark
+*.crc
+_delta_log/
+
+# Segredos
+.env
+
+# Airflow
+logs/
+airflow.db
+
+# IDE / SO
+.vscode/
+.idea/
+.DS_Store
