@@ -10,3 +10,9 @@ dependencies = [
     "psycopg2-binary==2.9.9",
     "pyspark==3.5.1",
 ]
+
+[dependency-groups]
+docs = [
+    "mkdocs-material>=9.7.6",
+    "pymdown-extensions>=10.21.3",
+]
