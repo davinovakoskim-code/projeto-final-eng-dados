@@ -117,6 +117,8 @@ docker compose -f docker/postgres/docker-compose.yml up -d
 # MinIO (console web em http://localhost:9001)
 docker compose -f docker/docker-compose.yml up -d
 ```
+> Ao subir, o MinIO cria automaticamente os buckets das camadas da arquitetura Medalhão: `landing`, `bronze`, `silver` e `gold` (via container `createbuckets`, que roda após o MinIO ficar disponível e encerra em seguida). O console web fica em http://localhost:9001 (login com as credenciais do `.env`).
+
 
 ### 3. Instalar dependências e gerar os dados
 
