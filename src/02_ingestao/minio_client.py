@@ -57,6 +57,7 @@ class UploadedObject:
     source_path: Path
     bucket: str
     object_name: str
+    existed_before: bool
 
 
 def load_environment() -> None:
@@ -175,6 +176,30 @@ def check_minio_connection(config: MinioConfig) -> None:
     validate_bucket(client, config.bucket)
 
 
+def object_exists(client, bucket: str, object_name: str) -> bool:
+    try:
+        from minio.error import S3Error
+    except ImportError as exc:
+        raise MinioConfigError(
+            "Dependencia minio nao instalada. Rode: uv sync"
+        ) from exc
+
+    try:
+        client.stat_object(bucket, object_name)
+    except S3Error as exc:
+        if exc.code in {"NoSuchKey", "NoSuchObject"}:
+            return False
+        raise MinioConnectionError(
+            f"Falha ao verificar objeto {bucket}/{object_name}: {exc}"
+        ) from exc
+    except Exception as exc:
+        raise MinioConnectionError(
+            f"Falha ao verificar objeto {bucket}/{object_name}: {exc}"
+        ) from exc
+
+    return True
+
+
 def upload_file(
     client,
     bucket: str,
@@ -185,6 +210,8 @@ def upload_file(
     source_path = source_path.resolve()
     if not source_path.is_file():
         raise MinioConnectionError(f"Arquivo local nao encontrado: {source_path}")
+
+    existed_before = object_exists(client, bucket, object_name)
 
     try:
         client.fput_object(
@@ -202,6 +229,7 @@ def upload_file(
         source_path=source_path,
         bucket=bucket,
         object_name=object_name,
+        existed_before=existed_before,
     )
 
 

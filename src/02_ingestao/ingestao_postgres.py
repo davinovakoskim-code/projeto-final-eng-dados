@@ -2,6 +2,7 @@ import argparse
 import csv
 import os
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -201,14 +202,25 @@ def write_tables_to_csv(
     return [(table, write_table_to_csv(output_dir, table)) for table in tables]
 
 
+def parse_extraction_date(value: str | None) -> date | None:
+    if not value:
+        return None
+
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError("Data de extracao invalida. Use o formato YYYY-MM-DD.") from exc
+
+
 def upload_written_tables(
     written_tables: Sequence[tuple[ExtractedTable, Path]],
-) -> list[tuple[ExtractedTable, Path, str]]:
+    extraction_date: date | None = None,
+) -> list[tuple[ExtractedTable, Path, str, bool]]:
     minio_config = MinioConfig.from_env()
     minio_client = build_minio_client(minio_config)
     validate_bucket(minio_client, minio_config.bucket)
 
-    uploaded_tables: list[tuple[ExtractedTable, Path, str]] = []
+    uploaded_tables: list[tuple[ExtractedTable, Path, str, bool]] = []
     for table, csv_path in written_tables:
         uploaded_object = upload_csv_to_landing(
             client=minio_client,
@@ -216,8 +228,16 @@ def upload_written_tables(
             source_path=csv_path,
             schema_name=table.schema_name,
             table_name=table.table_name,
+            extraction_date=extraction_date,
         )
-        uploaded_tables.append((table, csv_path, uploaded_object.object_name))
+        uploaded_tables.append(
+            (
+                table,
+                csv_path,
+                uploaded_object.object_name,
+                uploaded_object.existed_before,
+            )
+        )
 
     return uploaded_tables
 
@@ -260,6 +280,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Envia os CSVs gerados para o bucket landing no MinIO.",
     )
+    parser.add_argument(
+        "--extraction-date",
+        help="Data de extracao usada no path da Landing. Formato: YYYY-MM-DD.",
+    )
     return parser
 
 
@@ -275,6 +299,13 @@ def main() -> None:
 
     if not table_names:
         raise SystemExit("Informe pelo menos uma tabela usando --tables ou --tables-file.")
+
+    extraction_date = None
+    if args.upload_minio:
+        try:
+            extraction_date = parse_extraction_date(args.extraction_date)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
 
     if args.check_connection:
         check_connection(config)
@@ -297,7 +328,10 @@ def main() -> None:
 
     if args.upload_minio:
         try:
-            uploaded_tables = upload_written_tables(written_tables)
+            uploaded_tables = upload_written_tables(
+                written_tables,
+                extraction_date=extraction_date,
+            )
         except (
             LandingPathError,
             MinioConfigError,
@@ -306,8 +340,12 @@ def main() -> None:
             raise SystemExit(str(exc)) from exc
 
         print("CSVs enviados para o MinIO:")
-        for table, csv_path, object_name in uploaded_tables:
-            print(f"- {csv_path} -> {object_name} ({len(table.rows)} registros)")
+        for table, csv_path, object_name, existed_before in uploaded_tables:
+            status = "sobrescrito" if existed_before else "criado"
+            print(
+                f"- {csv_path} -> {object_name} "
+                f"({len(table.rows)} registros, {status})"
+            )
 
 
 if __name__ == "__main__":
