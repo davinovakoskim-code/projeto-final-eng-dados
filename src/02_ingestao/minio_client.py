@@ -1,11 +1,13 @@
 import argparse
 import os
 from dataclasses import dataclass
+from datetime import date
 from urllib.parse import urlparse
 
 
 DEFAULT_MINIO_ENDPOINT = "localhost:9000"
 DEFAULT_MINIO_BUCKET = "landing"
+DEFAULT_LANDING_FILE_EXTENSION = "csv"
 
 
 class MinioConfigError(RuntimeError):
@@ -13,6 +15,10 @@ class MinioConfigError(RuntimeError):
 
 
 class MinioConnectionError(RuntimeError):
+    pass
+
+
+class LandingPathError(ValueError):
     pass
 
 
@@ -98,6 +104,34 @@ def normalize_endpoint(endpoint: str) -> tuple[str, bool | None]:
         raise MinioConfigError("MINIO_ENDPOINT deve conter host e porta.")
 
     return parsed_endpoint.netloc, parsed_endpoint.scheme == "https"
+
+
+def validate_path_part(value: str, field_name: str) -> str:
+    value = value.strip()
+    if not value:
+        raise LandingPathError(f"{field_name} nao pode ser vazio.")
+    if "/" in value:
+        raise LandingPathError(f"{field_name} nao pode conter barra (/).")
+
+    return value
+
+
+def build_landing_object_name(
+    schema_name: str,
+    table_name: str,
+    extraction_date: date | None = None,
+    file_extension: str = DEFAULT_LANDING_FILE_EXTENSION,
+) -> str:
+    schema_name = validate_path_part(schema_name, "schema_name")
+    table_name = validate_path_part(table_name, "table_name")
+    file_extension = validate_path_part(file_extension.lstrip("."), "file_extension")
+    extraction_date = extraction_date or date.today()
+
+    return (
+        f"{schema_name}/{table_name}/"
+        f"data_extracao={extraction_date.isoformat()}/"
+        f"{table_name}.{file_extension}"
+    )
 
 
 def build_minio_client(config: MinioConfig):
