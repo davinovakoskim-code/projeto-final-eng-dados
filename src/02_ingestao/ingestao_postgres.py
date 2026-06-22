@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,9 +11,14 @@ DEFAULT_SCHEMA = "public"
 
 @dataclass(frozen=True)
 class ExtractedTable:
-    name: str
+    schema_name: str
+    table_name: str
     columns: list[str]
     rows: list[tuple]
+
+    @property
+    def name(self) -> str:
+        return f"{self.schema_name}.{self.table_name}"
 
 
 class TableNotFoundError(RuntimeError):
@@ -147,7 +153,8 @@ def extract_table(connection, table_name: str) -> ExtractedTable:
         rows = cursor.fetchall()
 
     return ExtractedTable(
-        name=f"{schema_name}.{raw_table_name}",
+        schema_name=schema_name,
+        table_name=raw_table_name,
         columns=columns,
         rows=rows,
     )
@@ -159,6 +166,29 @@ def extract_tables(
 ) -> list[ExtractedTable]:
     with build_connection(config) as connection:
         return [extract_table(connection, table_name) for table_name in table_names]
+
+
+def build_csv_path(output_dir: Path, table: ExtractedTable) -> Path:
+    return output_dir / table.schema_name / f"{table.table_name}.csv"
+
+
+def write_table_to_csv(output_dir: Path, table: ExtractedTable) -> Path:
+    csv_path = build_csv_path(output_dir, table)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with csv_path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(table.columns)
+        writer.writerows(table.rows)
+
+    return csv_path
+
+
+def write_tables_to_csv(
+    output_dir: Path,
+    tables: Sequence[ExtractedTable],
+) -> list[tuple[ExtractedTable, Path]]:
+    return [(table, write_table_to_csv(output_dir, table)) for table in tables]
 
 
 def check_connection(config: PostgresConfig) -> None:
@@ -188,6 +218,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Valida a conexao com o PostgreSQL antes de continuar.",
     )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("data/landing"),
+        help="Diretorio local onde os CSVs brutos serao gravados.",
+    )
     return parser
 
 
@@ -212,11 +248,14 @@ def main() -> None:
     except (TableNotFoundError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
 
+    written_tables = write_tables_to_csv(args.output_dir, extracted_tables)
+
     print(f"Banco de origem: {config.host}:{config.port}/{config.database}")
-    print("Tabelas extraidas:")
-    for table in extracted_tables:
+    print(f"Diretorio de saida: {args.output_dir}")
+    print("CSVs gerados:")
+    for table, csv_path in written_tables:
         print(
-            f"- {table.name}: {len(table.rows)} registros | "
+            f"- {csv_path}: {len(table.rows)} registros | "
             f"colunas: {', '.join(table.columns)}"
         )
 
