@@ -2,7 +2,21 @@ import argparse
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
+
+
+DEFAULT_SCHEMA = "public"
+
+
+@dataclass(frozen=True)
+class ExtractedTable:
+    name: str
+    columns: list[str]
+    rows: list[tuple]
+
+
+class TableNotFoundError(RuntimeError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -17,7 +31,7 @@ class PostgresConfig:
     def from_env(cls) -> "PostgresConfig":
         return cls(
             host=os.getenv("POSTGRES_HOST", "localhost"),
-            port=int(os.getenv("POSTGRES_PORT", "5432")),
+            port=_env_int("POSTGRES_PORT", 5432),
             user=_required_env("POSTGRES_USER"),
             password=_required_env("POSTGRES_PASSWORD"),
             database=_required_env("POSTGRES_DB"),
@@ -29,6 +43,28 @@ def _required_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"Variavel de ambiente obrigatoria nao definida: {name}")
     return value
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if value is None:
+        return default
+
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"Variavel de ambiente {name} deve ser um numero inteiro."
+        ) from exc
+
+
+def load_environment() -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+
+    load_dotenv()
 
 
 def parse_table_names(values: Iterable[str]) -> list[str]:
@@ -62,6 +98,69 @@ def build_connection(config: PostgresConfig):
     )
 
 
+def split_table_name(table_name: str) -> tuple[str, str]:
+    parts = [part.strip() for part in table_name.split(".")]
+
+    if len(parts) == 1 and parts[0]:
+        return DEFAULT_SCHEMA, parts[0]
+
+    if len(parts) == 2 and all(parts):
+        return parts[0], parts[1]
+
+    raise ValueError(
+        f"Nome de tabela invalido: {table_name}. Use tabela ou schema.tabela."
+    )
+
+
+def ensure_table_exists(connection, schema_name: str, table_name: str) -> None:
+    query = """
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = %s
+              AND table_name = %s
+              AND table_type = 'BASE TABLE'
+        )
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, (schema_name, table_name))
+        exists = cursor.fetchone()[0]
+
+    if not exists:
+        raise TableNotFoundError(f"Tabela nao encontrada: {schema_name}.{table_name}")
+
+
+def extract_table(connection, table_name: str) -> ExtractedTable:
+    from psycopg2 import sql
+
+    schema_name, raw_table_name = split_table_name(table_name)
+    ensure_table_exists(connection, schema_name, raw_table_name)
+
+    query = sql.SQL("SELECT * FROM {}").format(
+        sql.Identifier(schema_name, raw_table_name)
+    )
+
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        columns = [column.name for column in cursor.description]
+        rows = cursor.fetchall()
+
+    return ExtractedTable(
+        name=f"{schema_name}.{raw_table_name}",
+        columns=columns,
+        rows=rows,
+    )
+
+
+def extract_tables(
+    config: PostgresConfig,
+    table_names: Sequence[str],
+) -> list[ExtractedTable]:
+    with build_connection(config) as connection:
+        return [extract_table(connection, table_name) for table_name in table_names]
+
+
 def check_connection(config: PostgresConfig) -> None:
     with build_connection(config) as connection:
         with connection.cursor() as cursor:
@@ -93,6 +192,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    load_environment()
+
     args = build_parser().parse_args()
     config = PostgresConfig.from_env()
 
@@ -106,10 +207,18 @@ def main() -> None:
     if args.check_connection:
         check_connection(config)
 
+    try:
+        extracted_tables = extract_tables(config, table_names)
+    except (TableNotFoundError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
+
     print(f"Banco de origem: {config.host}:{config.port}/{config.database}")
-    print("Tabelas configuradas para ingestao:")
-    for table_name in table_names:
-        print(f"- {table_name}")
+    print("Tabelas extraidas:")
+    for table in extracted_tables:
+        print(
+            f"- {table.name}: {len(table.rows)} registros | "
+            f"colunas: {', '.join(table.columns)}"
+        )
 
 
 if __name__ == "__main__":
