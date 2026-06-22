@@ -59,6 +59,12 @@ Para alterar o diretorio de saida:
 python src/02_ingestao/ingestao_postgres.py --tables plataformas --output-dir data/teste_landing
 ```
 
+Para enviar os CSVs gerados para o MinIO:
+
+```bash
+python src/02_ingestao/ingestao_postgres.py --tables plataformas --upload-minio
+```
+
 Se uma tabela informada nao existir, a execucao e interrompida com erro.
 
 ## MinIO
@@ -86,3 +92,5 @@ public/plataformas/data_extracao=2026-06-22/plataformas.csv
 ```
 
 Esse padrao fica centralizado na funcao `build_landing_object_name`.
+
+Ao usar `--upload-minio`, cada CSV local e enviado para esse path no bucket configurado.

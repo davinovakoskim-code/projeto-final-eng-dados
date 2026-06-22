@@ -5,6 +5,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from minio_client import (
+    LandingPathError,
+    MinioConfig,
+    MinioConfigError,
+    MinioConnectionError,
+    build_minio_client,
+    upload_csv_to_landing,
+    validate_bucket,
+)
+
 
 DEFAULT_SCHEMA = "public"
 
@@ -191,6 +201,27 @@ def write_tables_to_csv(
     return [(table, write_table_to_csv(output_dir, table)) for table in tables]
 
 
+def upload_written_tables(
+    written_tables: Sequence[tuple[ExtractedTable, Path]],
+) -> list[tuple[ExtractedTable, Path, str]]:
+    minio_config = MinioConfig.from_env()
+    minio_client = build_minio_client(minio_config)
+    validate_bucket(minio_client, minio_config.bucket)
+
+    uploaded_tables: list[tuple[ExtractedTable, Path, str]] = []
+    for table, csv_path in written_tables:
+        uploaded_object = upload_csv_to_landing(
+            client=minio_client,
+            bucket=minio_config.bucket,
+            source_path=csv_path,
+            schema_name=table.schema_name,
+            table_name=table.table_name,
+        )
+        uploaded_tables.append((table, csv_path, uploaded_object.object_name))
+
+    return uploaded_tables
+
+
 def check_connection(config: PostgresConfig) -> None:
     with build_connection(config) as connection:
         with connection.cursor() as cursor:
@@ -223,6 +254,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("data/landing"),
         help="Diretorio local onde os CSVs brutos serao gravados.",
+    )
+    parser.add_argument(
+        "--upload-minio",
+        action="store_true",
+        help="Envia os CSVs gerados para o bucket landing no MinIO.",
     )
     return parser
 
@@ -258,6 +294,20 @@ def main() -> None:
             f"- {csv_path}: {len(table.rows)} registros | "
             f"colunas: {', '.join(table.columns)}"
         )
+
+    if args.upload_minio:
+        try:
+            uploaded_tables = upload_written_tables(written_tables)
+        except (
+            LandingPathError,
+            MinioConfigError,
+            MinioConnectionError,
+        ) as exc:
+            raise SystemExit(str(exc)) from exc
+
+        print("CSVs enviados para o MinIO:")
+        for table, csv_path, object_name in uploaded_tables:
+            print(f"- {csv_path} -> {object_name} ({len(table.rows)} registros)")
 
 
 if __name__ == "__main__":
