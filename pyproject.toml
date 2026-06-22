@@ -1,0 +1,18 @@
+[project]
+name = "projeto-final-eng-dados"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "delta-spark==3.2.0",
+    "dotenv>=0.9.9",
+    "faker==25.2.0",
+    "minio==7.2.7",
+    "psycopg2-binary==2.9.9",
+    "pyspark==3.5.1",
+]
+
+[dependency-groups]
+docs = [
+    "mkdocs-material>=9.7.6",
+    "pymdown-extensions>=10.21.3",
+]

@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    env_file:
+      - ../.env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - datalake
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  minio_data:
+    name: minio_data
+
+networks:
+  datalake:
+    name: datalake
+    driver: bridge
