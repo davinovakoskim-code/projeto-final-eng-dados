@@ -1,7 +1,7 @@
 # Ingestao PostgreSQL
 
 Esta pasta contem a ingestao de dados brutos do PostgreSQL.
-Nesta etapa o script conecta no banco e le as tabelas configuradas, sem aplicar transformacoes e sem gravar CSV.
+Nesta etapa o script conecta no banco, le as tabelas configuradas e grava um CSV bruto local por tabela.
 
 ## Configuracao
 
@@ -40,6 +40,18 @@ POSTGRES_USER=admin \
 POSTGRES_PASSWORD=admin \
 POSTGRES_DB=origem \
 uv run python src/02_ingestao/ingestao_postgres.py --tables plataformas jogos
+```
+
+Por padrao os arquivos sao gravados em:
+
+```text
+data/landing/{schema}/{tabela}.csv
+```
+
+Para alterar o diretorio de saida:
+
+```bash
+python src/02_ingestao/ingestao_postgres.py --tables plataformas --output-dir data/teste_landing
 ```
 
 Se uma tabela informada nao existir, a execucao e interrompida com erro.
