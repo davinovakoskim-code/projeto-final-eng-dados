@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   minio:
     image: minio/minio:latest
@@ -15,12 +13,33 @@ services:
     networks:
       - datalake
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
     restart: unless-stopped
+
+  createbuckets:
+    image: minio/mc:latest
+    container_name: minio_createbuckets
+    depends_on:
+      minio:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    networks:
+      - datalake
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      mc mb --ignore-existing local/landing;
+      mc mb --ignore-existing local/bronze;
+      mc mb --ignore-existing local/silver;
+      mc mb --ignore-existing local/gold;
+      echo 'Buckets criados com sucesso';
+      exit 0;
+      "
 
 volumes:
   minio_data:
