@@ -109,7 +109,12 @@ MINIO_ROOT_PASSWORD=troque_aqui
 > preenchendo apenas o bloco `DB_*`.
 
 ### 2. Subir a infraestrutura
+Antes de subir os serviços, crie a rede Docker compartilhada (apenas uma vez):
+```bash
+docker network create datalake
+```
 
+Essa rede permite que os containers (Postgres, MinIO e, futuramente, Airflow) se comuniquem entre si.
 ```bash
 # PostgreSQL de origem (cria o schema automaticamente a partir de src/01_origem/schema.sql)
 docker compose -f docker/postgres/docker-compose.yml up -d
