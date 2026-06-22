@@ -70,3 +70,19 @@ python src/02_ingestao/minio_client.py --check-connection
 ```
 
 O bucket padrao de destino e `landing`, mas pode ser alterado com `MINIO_BUCKET`.
+
+### Estrutura da Landing
+
+Os arquivos no bucket `landing` seguem o padrao:
+
+```text
+{schema}/{tabela}/data_extracao=YYYY-MM-DD/{tabela}.csv
+```
+
+Exemplo:
+
+```text
+public/plataformas/data_extracao=2026-06-22/plataformas.csv
+```
+
+Esse padrao fica centralizado na funcao `build_landing_object_name`.
