@@ -41,9 +41,37 @@ services:
       exit 0;
       "
 
+  jupyter:
+    image: quay.io/jupyter/pyspark-notebook:spark-3.5.3
+    container_name: jupyter_spark
+    depends_on:
+      minio:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      AWS_ACCESS_KEY_ID: "${MINIO_ROOT_USER}"
+      AWS_SECRET_ACCESS_KEY: "${MINIO_ROOT_PASSWORD}"
+      PYSPARK_SUBMIT_ARGS: "--packages io.delta:delta-spark_2.12:3.2.0,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.367 pyspark-shell"
+      JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+      SPARK_HOME: "/usr/local/spark-3.5.3-bin-hadoop3"
+      PYTHONPATH: "/usr/local/spark-3.5.3-bin-hadoop3/python:/usr/local/spark-3.5.3-bin-hadoop3/python/lib/py4j-0.10.9.7-src.zip"
+      PATH: "/usr/local/spark-3.5.3-bin-hadoop3/bin:/usr/lib/jvm/java-17-openjdk-amd64/bin:/opt/conda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ports:
+      - "8888:8888"
+    volumes:
+      - ../:/home/jovyan/work
+      - jupyter_data:/home/jovyan/.ivy2
+    networks:
+      - datalake
+    restart: unless-stopped
+
 volumes:
   minio_data:
     name: minio_data
+  jupyter_data:
+    name: jupyter_data
 
 networks:
   datalake:
