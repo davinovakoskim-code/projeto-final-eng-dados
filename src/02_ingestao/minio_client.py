@@ -2,6 +2,7 @@ import argparse
 import os
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 from urllib.parse import urlparse
 
 
@@ -49,6 +50,13 @@ class MinioConfig:
             bucket=os.getenv("MINIO_BUCKET", DEFAULT_MINIO_BUCKET),
             secure=secure,
         )
+
+
+@dataclass(frozen=True)
+class UploadedObject:
+    source_path: Path
+    bucket: str
+    object_name: str
 
 
 def load_environment() -> None:
@@ -165,6 +173,60 @@ def validate_bucket(client, bucket: str) -> None:
 def check_minio_connection(config: MinioConfig) -> None:
     client = build_minio_client(config)
     validate_bucket(client, config.bucket)
+
+
+def upload_file(
+    client,
+    bucket: str,
+    source_path: Path,
+    object_name: str,
+    content_type: str = "text/csv",
+) -> UploadedObject:
+    source_path = source_path.resolve()
+    if not source_path.is_file():
+        raise MinioConnectionError(f"Arquivo local nao encontrado: {source_path}")
+
+    try:
+        client.fput_object(
+            bucket_name=bucket,
+            object_name=object_name,
+            file_path=str(source_path),
+            content_type=content_type,
+        )
+    except Exception as exc:
+        raise MinioConnectionError(
+            f"Falha ao enviar {source_path} para {bucket}/{object_name}: {exc}"
+        ) from exc
+
+    return UploadedObject(
+        source_path=source_path,
+        bucket=bucket,
+        object_name=object_name,
+    )
+
+
+def upload_csv_to_landing(
+    client,
+    bucket: str,
+    source_path: Path,
+    schema_name: str,
+    table_name: str,
+    extraction_date: date | None = None,
+) -> UploadedObject:
+    object_name = build_landing_object_name(
+        schema_name=schema_name,
+        table_name=table_name,
+        extraction_date=extraction_date,
+        file_extension="csv",
+    )
+
+    return upload_file(
+        client=client,
+        bucket=bucket,
+        source_path=source_path,
+        object_name=object_name,
+        content_type="text/csv",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
