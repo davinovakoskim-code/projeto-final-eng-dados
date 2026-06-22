@@ -65,6 +65,12 @@ Para enviar os CSVs gerados para o MinIO:
 python src/02_ingestao/ingestao_postgres.py --tables plataformas --upload-minio
 ```
 
+Para reprocessar uma data especifica:
+
+```bash
+python src/02_ingestao/ingestao_postgres.py --tables plataformas --upload-minio --extraction-date 2026-06-22
+```
+
 Se uma tabela informada nao existir, a execucao e interrompida com erro.
 
 ## MinIO
@@ -94,3 +100,9 @@ public/plataformas/data_extracao=2026-06-22/plataformas.csv
 Esse padrao fica centralizado na funcao `build_landing_object_name`.
 
 Ao usar `--upload-minio`, cada CSV local e enviado para esse path no bucket configurado.
+
+### Reprocessamento
+
+Para a mesma tabela e `data_extracao`, o destino no MinIO e sempre o mesmo.
+Se o objeto ja existir, o upload sobrescreve o arquivo existente em vez de criar um duplicado.
+O log informa se cada objeto foi `criado` ou `sobrescrito`.
