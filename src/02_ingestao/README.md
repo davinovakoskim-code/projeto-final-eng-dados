@@ -1,6 +1,7 @@
 # Ingestao PostgreSQL
 
-Esta pasta contem a base da ingestao de dados brutos do PostgreSQL.
+Esta pasta contem a ingestao de dados brutos do PostgreSQL.
+Nesta etapa o script conecta no banco e le as tabelas configuradas, sem aplicar transformacoes e sem gravar CSV.
 
 ## Configuracao
 
@@ -29,3 +30,16 @@ Para validar a conexao antes de executar:
 ```bash
 python src/02_ingestao/ingestao_postgres.py --tables clientes --check-connection
 ```
+
+Exemplo usando o PostgreSQL local do Docker:
+
+```bash
+POSTGRES_HOST=localhost \
+POSTGRES_PORT=5433 \
+POSTGRES_USER=admin \
+POSTGRES_PASSWORD=admin \
+POSTGRES_DB=origem \
+uv run python src/02_ingestao/ingestao_postgres.py --tables plataformas jogos
+```
+
+Se uma tabela informada nao existir, a execucao e interrompida com erro.
