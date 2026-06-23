@@ -12,6 +12,8 @@ x-airflow-common: &airflow-common
   volumes:
     - ../../src/05_orquestracao:/opt/airflow/dags
     - airflow_logs:/opt/airflow/logs
+  networks:
+    - datalake
   depends_on:
     postgres-airflow:
       condition: service_healthy
@@ -21,6 +23,8 @@ services:
     image: postgres:15
     container_name: postgres_airflow
     restart: unless-stopped
+    networks:
+      - datalake
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -83,3 +87,7 @@ services:
 volumes:
   postgres_airflow_data:
   airflow_logs:
+
+networks:
+  datalake:
+    external: true
