@@ -1,11 +1,15 @@
 import argparse
+import csv
 import os
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Iterable, Sequence
 
 
 DEFAULT_SCHEMA = "public"
+DEFAULT_OUTPUT_DIR = Path("data/landing")
+DEFAULT_BUCKET = "landing"
 
 
 @dataclass(frozen=True)
@@ -38,11 +42,41 @@ class PostgresConfig:
         )
 
 
+@dataclass(frozen=True)
+class MinioConfig:
+    endpoint: str
+    access_key: str
+    secret_key: str
+    bucket: str
+    secure: bool
+
+    @classmethod
+    def from_env(cls) -> "MinioConfig":
+        endpoint = _required_env("MINIO_ENDPOINT")
+        if "://" in endpoint:
+            endpoint = endpoint.split("://", 1)[1]
+
+        return cls(
+            endpoint=endpoint,
+            access_key=_required_env("MINIO_ROOT_USER"),
+            secret_key=_required_env("MINIO_ROOT_PASSWORD"),
+            bucket=os.getenv("MINIO_BUCKET", DEFAULT_BUCKET),
+            secure=_env_bool("MINIO_SECURE", False),
+        )
+
+
 def _required_env(name: str) -> str:
     value = os.getenv(name)
     if not value:
         raise RuntimeError(f"Variavel de ambiente obrigatoria nao definida: {name}")
     return value
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "t", "yes", "y"}
 
 
 def _env_int(name: str, default: int) -> int:
@@ -161,6 +195,82 @@ def extract_tables(
         return [extract_table(connection, table_name) for table_name in table_names]
 
 
+def _safe_file_name(table_name: str) -> str:
+    """Converte schema.tabela em um nome de arquivo seguro (schema__tabela)."""
+    return table_name.replace(".", "__")
+
+
+def write_table_csv(table: ExtractedTable, destination_dir: Path) -> Path:
+    """Escreve uma tabela como CSV bruto e retorna o caminho gerado.
+
+    A escrita e atomica: grava em um arquivo temporario e renomeia ao final,
+    garantindo idempotencia (reexecutar sobrescreve sem deixar arquivo parcial).
+    """
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    destination = destination_dir / f"{_safe_file_name(table.name)}.csv"
+    tmp_destination = destination.with_suffix(".csv.tmp")
+
+    with tmp_destination.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(table.columns)
+        writer.writerows(table.rows)
+
+    tmp_destination.replace(destination)
+    return destination
+
+
+def write_tables_csv(
+    tables: Sequence[ExtractedTable],
+    output_dir: Path,
+    extraction_date: date,
+) -> list[Path]:
+    """Escreve todas as tabelas em output_dir/extraction_date=YYYY-MM-DD/."""
+    partition_dir = output_dir / f"extraction_date={extraction_date.isoformat()}"
+    return [write_table_csv(table, partition_dir) for table in tables]
+
+
+def build_minio_client(config: MinioConfig):
+    from minio import Minio
+
+    return Minio(
+        config.endpoint,
+        access_key=config.access_key,
+        secret_key=config.secret_key,
+        secure=config.secure,
+    )
+
+
+def ensure_bucket_exists(client, bucket: str) -> None:
+    if not client.bucket_exists(bucket):
+        client.make_bucket(bucket)
+
+
+def upload_files_to_minio(
+    config: MinioConfig,
+    files: Sequence[Path],
+    output_dir: Path,
+) -> list[str]:
+    """Sobe os CSVs para o bucket, preservando a estrutura de pastas relativa.
+
+    Retorna a lista de object names criados (idempotente: put_object sobrescreve).
+    """
+    client = build_minio_client(config)
+    ensure_bucket_exists(client, config.bucket)
+
+    object_names: list[str] = []
+    for file_path in files:
+        object_name = file_path.relative_to(output_dir).as_posix()
+        client.fput_object(
+            config.bucket,
+            object_name,
+            str(file_path),
+            content_type="text/csv",
+        )
+        object_names.append(object_name)
+
+    return object_names
+
+
 def check_connection(config: PostgresConfig) -> None:
     with build_connection(config) as connection:
         with connection.cursor() as cursor:
@@ -187,6 +297,23 @@ def build_parser() -> argparse.ArgumentParser:
         "--check-connection",
         action="store_true",
         help="Valida a conexao com o PostgreSQL antes de continuar.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help="Diretorio local onde os CSVs da landing serao gravados.",
+    )
+    parser.add_argument(
+        "--extraction-date",
+        type=date.fromisoformat,
+        default=date.today(),
+        help="Data da extracao (YYYY-MM-DD) usada para particionar a landing. Padrao: hoje.",
+    )
+    parser.add_argument(
+        "--upload-minio",
+        action="store_true",
+        help="Apos gerar os CSVs, faz upload para o bucket landing no MinIO.",
     )
     return parser
 
@@ -219,6 +346,27 @@ def main() -> None:
             f"- {table.name}: {len(table.rows)} registros | "
             f"colunas: {', '.join(table.columns)}"
         )
+
+    written_files = write_tables_csv(
+        extracted_tables, args.output_dir, args.extraction_date
+    )
+    print(
+        f"\nCSVs gravados em {args.output_dir}/"
+        f"extraction_date={args.extraction_date.isoformat()}/ "
+        f"({len(written_files)} arquivos)."
+    )
+
+    if args.upload_minio:
+        minio_config = MinioConfig.from_env()
+        object_names = upload_files_to_minio(
+            minio_config, written_files, args.output_dir
+        )
+        print(
+            f"Upload concluido para o bucket '{minio_config.bucket}' "
+            f"({len(object_names)} objetos):"
+        )
+        for object_name in object_names:
+            print(f"- {object_name}")
 
 
 if __name__ == "__main__":
