@@ -2,6 +2,10 @@
 
 Lê os dados de **Bronze**, aplica regras de **Data Quality** e grava em **Silver**.
 
+!!! note "Etapa anterior"
+    A persistência Landing → **Bronze** (Delta Lake, fiel à origem) está documentada em
+    [Ingestão (Landing → Bronze)](ingestao.md#bronze-persistencia-em-delta-lake).
+
 !!! warning "A iniciar"
     Etapa ainda não começada (sem PR associado).
 

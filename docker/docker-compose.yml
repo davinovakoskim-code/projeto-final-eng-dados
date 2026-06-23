@@ -42,7 +42,9 @@ services:
       "
 
   jupyter:
-    image: quay.io/jupyter/pyspark-notebook:spark-3.5.3
+    build:
+      context: ./jupyter
+    image: projeto-eng-dados/jupyter-spark:3.5.3
     container_name: jupyter_spark
     depends_on:
       minio:
