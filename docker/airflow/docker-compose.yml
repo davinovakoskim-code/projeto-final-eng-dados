@@ -2,6 +2,8 @@ version: "3.8"
 
 x-airflow-common: &airflow-common
   image: apache/airflow:2.9.3
+  env_file:
+    - ../../.env
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow_metadata
@@ -9,6 +11,8 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
+    AIRFLOW_CONN_POSTGRES_ORIGEM: "postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@postgres_origem:5432/${POSTGRES_DB:-origem}"
+    AIRFLOW_CONN_MINIO_DEFAULT: "aws://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@?endpoint_url=http%3A%2F%2Fminio%3A9000"   
   volumes:
     - ../../src/05_orquestracao:/opt/airflow/dags
     - airflow_logs:/opt/airflow/logs
