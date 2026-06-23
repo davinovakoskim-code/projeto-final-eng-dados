@@ -1,22 +1,38 @@
 # Ingestão — Landing → Bronze
 
-Extrai as tabelas do PostgreSQL de origem para a camada **Landing** (CSV bruto) no MinIO
-e, em seguida, persiste em **Bronze** (Delta).
+Extrai as tabelas do PostgreSQL de origem para a camada **Landing** (CSV bruto) no MinIO.
+A persistência em **Bronze** (Delta) é a etapa seguinte do pipeline.
 
-!!! warning "Em desenvolvimento"
-    Etapa em andamento. PR **#48** (base da ingestão) em revisão; issues **#42–#47**
-    (extração parametrizada, CSV bruto, client MinIO, upload e idempotência) pendentes.
-
-## Etapas planejadas
+## Etapas
 
 1. Conectar ao PostgreSQL via variáveis de ambiente (`.env`).
 2. Extrair cada tabela de forma parametrizada (`--tables` / `--tables-file`).
-3. Gerar CSV bruto por tabela.
-4. Subir os CSVs para o bucket **landing** no MinIO.
-5. Garantir idempotência (reexecução sem duplicar dados).
+3. Gerar CSV bruto por tabela em `data/landing/extraction_date=YYYY-MM-DD/`.
+4. Subir os CSVs para o bucket **landing** no MinIO (`--upload-minio`).
+5. Idempotência: a escrita é atômica (arquivo temporário + rename) e o upload
+   sobrescreve o objeto, então reexecutar a mesma data não duplica dados.
 
-## Código
+## Uso
 
-!!! note "A preencher após o merge"
-    Quando `src/02_ingestao/` tiver o script, embuta o código real nesta página usando
-    a convenção de snippets descrita em [Contribuindo](contribuindo.md#convencao-citar-codigo-real-snippets).
+```bash
+uv run python src/02_ingestao/ingestao_postgres.py \
+  --tables plataformas jogos streamers viewers emotes transmissoes \
+           visualizacoes follows assinaturas doacoes clips raids moderadores \
+  --output-dir data/landing \
+  --extraction-date 2026-06-22 \
+  --upload-minio
+```
+
+As tabelas também podem vir de um arquivo com `--tables-file`. Use `--check-connection`
+para validar o acesso ao PostgreSQL antes de extrair.
+
+### Variáveis de ambiente
+
+| Variável | Obrigatória | Padrão |
+|---|---|---|
+| `POSTGRES_HOST` / `POSTGRES_PORT` | não | `localhost` / `5432` |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | sim | — |
+| `MINIO_ENDPOINT` | só com `--upload-minio` | — |
+| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | só com `--upload-minio` | — |
+| `MINIO_BUCKET` | não | `landing` |
+| `MINIO_SECURE` | não | `false` |
