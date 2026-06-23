@@ -75,5 +75,4 @@ volumes:
 
 networks:
   datalake:
-    name: datalake
-    driver: bridge
+    external: true
