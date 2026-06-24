@@ -1,60 +1,83 @@
 site_name: "Projeto Final — Engenharia de Dados"
-site_description: "Pipeline de dados com arquitetura Medalhão (Landing → Bronze → Silver → Gold) usando PostgreSQL, MinIO, Airflow e Delta Lake."
+site_description: "Pipeline de dados com PostgreSQL, MinIO, Airflow e Delta Lake — Arquitetura Medalhão (Landing → Bronze → Silver → Gold)"
 site_author: "Equipe de Engenharia de Dados — SATC"
+site_url: "https://davinovakoskim-code.github.io/projeto-final-eng-dados/"
 
-repo_url: https://github.com/davinovakoskim-code/projeto-final-eng-dados
-repo_name: davinovakoskim-code/projeto-final-eng-dados
-edit_uri: edit/main/docs/
+repo_name: "davinovakoskim-code/projeto-final-eng-dados"
+repo_url: "https://github.com/davinovakoskim-code/projeto-final-eng-dados"
+edit_uri: "edit/main/docs/"
 
 theme:
   name: material
-  language: pt-BR
+  language: pt
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: deep purple
-      accent: purple
+    - scheme: slate
+      primary: deep orange
+      accent: orange
       toggle:
-        icon: material/weather-night
-        name: Mudar para o modo escuro
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: deep purple
-      accent: purple
+        icon: material/brightness-4
+        name: Modo claro
+    - scheme: default
+      primary: deep orange
+      accent: orange
       toggle:
-        icon: material/weather-sunny
-        name: Mudar para o modo claro
+        icon: material/brightness-7
+        name: Modo escuro
+  font:
+    text: Roboto
+    code: Roboto Mono
   features:
-    - navigation.instant
-    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
-    - navigation.indexes
     - navigation.top
+    - navigation.indexes
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
     - toc.follow
-    - content.code.copy        # botão de copiar nos blocos de código
-    - content.code.annotate    # anotações dentro do código
-    - content.action.edit      # link "editar esta página" -> arquivo no GitHub
   icon:
     repo: fontawesome/brands/github
+    logo: material/database-arrow-right
 
-plugins:
-  - search:
-      lang: pt
+nav:
+  - 🏠 Início: index.md
+  - 🏛️ Arquitetura: arquitetura.md
+  - 🗄️ Camadas do Pipeline:
+      - 🐘 Origem: origem.md
+      - 🥉 Ingestão (Landing → Bronze): ingestao.md
+      - 🥈 Transformação (Silver): transformacao.md
+      - 🥇 Gold (Kimball): gold.md
+  - 📊 Dashboard: dashboard.md
+  - 📚 Referências: referencias.md
+  - 🤝 Contribuindo: contribuindo.md
 
 markdown_extensions:
   - admonition
   - attr_list
-  - md_in_html
+  - def_list
   - footnotes
+  - md_in_html
+  - tables
   - toc:
       permalink: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  # >>> Extensão-chave: embute o CÓDIGO REAL do projeto dentro da doc.
-  # Uso:  --8<-- "src/01_origem/schema.sql"  (ou com intervalo de linhas :ini:fim)
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
   - pymdownx.snippets:
       base_path: ["."]
       check_paths: true
@@ -65,15 +88,22 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 
-nav:
-  - Início: index.md
-  - Arquitetura: arquitetura.md
-  - Camadas do Pipeline:
-      - Origem: origem.md
-      - Ingestão (Landing → Bronze): ingestao.md
-      - Transformação (Silver): transformacao.md
-      - Gold (Kimball): gold.md
-  - Dashboard: dashboard.md
-  - Referências: referencias.md
-  - Contribuindo: contribuindo.md
+plugins:
+  - search:
+      lang: pt
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/davinovakoskim-code/projeto-final-eng-dados
+      name: Repositório no GitHub
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+copyright: "© 2026 Equipe de Engenharia de Dados • SATC — Engenharia de Software"

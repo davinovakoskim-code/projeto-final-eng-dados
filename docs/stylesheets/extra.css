@@ -1,0 +1,19 @@
+/* Realce sutil nos títulos de seção */
+.md-typeset h2 {
+  border-bottom: 2px solid var(--md-accent-fg-color);
+  padding-bottom: .2rem;
+}
+
+/* Cards de tabela com leve respiro */
+.md-typeset table:not([class]) {
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Hero centralizado na home */
+.hero {
+  text-align: center;
+  margin: 1.2rem 0 2rem;
+}
+.hero .badges img { margin: .15rem; }

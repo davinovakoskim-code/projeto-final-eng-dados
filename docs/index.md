@@ -1,64 +1,74 @@
-# Projeto Final — Engenharia de Dados
+# 🏆 Projeto Final — Engenharia de Dados
 
-Pipeline de dados implementando a **arquitetura Medalhão** (Landing → Bronze → Silver → Gold)
-sobre um banco relacional estilo **plataforma de streaming (Twitch-like)**, com orquestração
-via Apache Airflow e data lake em MinIO.
+<div class="hero" markdown>
+
+### Arquitetura Medalhão • Lakehouse Self-Hosted • Streaming Analytics
+
+<span class="badges">
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![MinIO](https://img.shields.io/badge/MinIO-C72E49?style=for-the-badge&logo=minio&logoColor=white)
+![Airflow](https://img.shields.io/badge/Apache_Airflow-017CEE?style=for-the-badge&logo=apacheairflow&logoColor=white)
+![Delta Lake](https://img.shields.io/badge/Delta_Lake-00ADD8?style=for-the-badge&logo=delta&logoColor=white)
+![Spark](https://img.shields.io/badge/Apache_Spark-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)
+</span>
+
+</div>
 
 !!! info "Disciplina"
-    Engenharia de Dados — Prof. Jorge Luiz Silva · SATC (Criciúma/SC).
-    Complemento dos Trabalhos 1 e 2; arquitetura Medalhão em ambiente self-hosted.
+    **Engenharia de Dados** — Prof. Jorge Luiz Silva · **SATC** (Criciúma/SC) · 5ª Fase de Eng. de Software.
 
-## Objetivo
+Pipeline de dados **end-to-end** com **arquitetura Medalhão** (Landing → Bronze → Silver → Gold)
+sobre um banco relacional estilo **plataforma de streaming (Twitch-like)**, com data lake em
+**MinIO**, processamento em **PySpark + Delta Lake** e orquestração via **Apache Airflow** —
+tudo **self-hosted** com Docker.
 
-Construir um pipeline ponta a ponta que:
+## 🎯 Objetivo
 
-1. **Extrai** todas as tabelas do banco de origem (PostgreSQL) para a camada **Landing** (CSV bruto).
-2. Grava os dados em **Bronze** (formato Delta, dado cru).
-3. Aplica **Data Quality** e grava em **Silver** (dado tratado e confiável).
-4. Modela tabelas dimensionais (**Ralph Kimball**) na camada **Gold**.
-5. Orquestra todas as etapas em sequência via **Airflow** (sem cron do SO).
+1. **Extrair** todas as tabelas da origem (PostgreSQL) para a camada **Landing** (CSV).
+2. Gravar em **Bronze** (Delta, dado cru).
+3. Aplicar **Data Quality** e gravar em **Silver**.
+4. Modelar tabelas dimensionais (**Ralph Kimball**) na camada **Gold**.
+5. **Orquestrar** todas as etapas em sequência via **Airflow** (sem cron do SO).
 
 ```mermaid
 flowchart LR
-    A[(PostgreSQL<br/>Origem)] --> B[Landing<br/>CSV bruto]
-    B --> C[Bronze<br/>Delta / raw]
-    C --> D[Silver<br/>Data Quality]
-    D --> E[Gold<br/>Star Schema]
-    E --> F[[Dashboard]]
-    subgraph MinIO [Data Lake - MinIO]
+    A[(PostgreSQL<br/>Origem)] --> B[🥉 Landing]
+    B --> C[🥉 Bronze]
+    C --> D[🥈 Silver]
+    D --> E[🥇 Gold]
+    E --> F[[📊 Dashboard]]
+    subgraph MinIO [🗄️ MinIO · Data Lake]
         B
         C
         D
         E
     end
-    classDef lake fill:#ede7f6,stroke:#673ab7,color:#311b92;
-    class B,C,D,E lake;
 ```
 
-## Stack
+## 🧰 Stack
 
 | Camada / Função | Tecnologia |
-|---|---|
+|:--|:--|
 | Banco de origem | PostgreSQL 15 (Docker) |
 | Data Lake | MinIO (S3-compatível) |
 | Processamento | PySpark + Delta Lake |
-| Orquestração | Apache Airflow |
-| Geração de dados | Faker |
-| Gerenciador de dependências | uv |
+| Orquestração | Apache Airflow (LocalExecutor) |
+| Dependências | uv (Python 3.12) |
 | Documentação | MkDocs + Material |
 
-## Progresso da documentação
+## 📊 Progresso
 
-> Esta documentação é consolidada por uma pessoa (orquestração + docs) à medida que cada
-> etapa do pipeline é finalizada pelos responsáveis. Status de cada seção:
+- [x] **Origem** — schema (13 tabelas) + geração de dados (Faker)
+- [x] **Infraestrutura** — PostgreSQL + MinIO + buckets + rede `datalake`
+- [x] **Engine** — Spark + Delta Lake + MinIO (s3a)
+- [x] **Airflow** — LocalExecutor + connections (Postgres + MinIO)
+- [x] **Documentação** — MkDocs + README
+- [ ] **Ingestão** — Landing → Bronze
+- [ ] **Transformação** — Silver (Data Quality)
+- [ ] **Gold** — modelagem dimensional (Kimball)
+- [ ] **Orquestração** — DAG encadeando as etapas
+- [ ] **Dashboard**
 
-| Seção | Fonte (issue/PR) | Status |
-|---|---|---|
-| Origem | #38 (schema), #39 (Faker), #40 (compose) — **mergeados** | ✅ Pronta para documentar |
-| Arquitetura / Infra | #53 (uv), #49/#74 (MinIO) | 🟡 Em consolidação |
-| Ingestão (Landing/Bronze) | #48 (em revisão), #42–#47 | ⏳ Aguardando merge |
-| Transformação (Silver) | a iniciar | ⏳ Aguardando |
-| Gold (Kimball) | a iniciar | ⏳ Aguardando |
-| Dashboard | a iniciar | ⏳ Aguardando |
-
-_Issues de documentação: **#31** (setup MkDocs) e **#32** (README + deploy)._
+!!! tip "Navegue pela documentação"
+    Use as abas no topo: **Arquitetura**, **Camadas do Pipeline** (Origem, Ingestão,
+    Transformação, Gold), **Dashboard** e **Referências**.

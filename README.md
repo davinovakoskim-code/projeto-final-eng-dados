@@ -1,175 +1,194 @@
-# Projeto Final — Engenharia de Dados
+<div align="center">
 
-Pipeline de dados ponta a ponta implementando a **arquitetura Medalhão**
-(Landing → Bronze → Silver → Gold) sobre um banco relacional estilo plataforma de
-streaming (Twitch-like), com data lake em **MinIO**, processamento em **PySpark + Delta Lake**
-e orquestração via **Apache Airflow**.
+# 🏆 Projeto Final — Engenharia de Dados
+### Arquitetura Medalhão • Lakehouse Self-Hosted • Streaming Analytics
 
-> Disciplina de Engenharia de Dados — Prof. Jorge Luiz Silva · SATC (Criciúma/SC).
-> Complemento dos Trabalhos 1 e 2, em ambiente self-hosted.
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![MinIO](https://img.shields.io/badge/MinIO-C72E49?style=for-the-badge&logo=minio&logoColor=white)
+![Apache Airflow](https://img.shields.io/badge/Apache_Airflow-017CEE?style=for-the-badge&logo=apacheairflow&logoColor=white)
+![Delta Lake](https://img.shields.io/badge/Delta_Lake-00ADD8?style=for-the-badge&logo=delta&logoColor=white)
+![Apache Spark](https://img.shields.io/badge/Apache_Spark-E25A1C?style=for-the-badge&logo=apachespark&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Python](https://img.shields.io/badge/Python_3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
-## Visão geral
+[![MkDocs](https://img.shields.io/badge/📖_Documentação_Online-MkDocs-blue?style=for-the-badge)](https://davinovakoskim-code.github.io/projeto-final-eng-dados/)
 
-O projeto extrai todas as tabelas de um PostgreSQL de origem e as faz percorrer as camadas
-da arquitetura Medalhão, em qualidade crescente, até estarem prontas para análise:
+---
+
+**🎓 SATC** — Associação Beneficente da Indústria Carbonífera de Santa Catarina  
+**📘 Engenharia de Software** • 5ª Fase • **Engenharia de Dados**  
+**🧑‍🏫 Professor:** Jorge Luiz Silva
+
+</div>
+
+---
+
+## 🎯 Sobre o Projeto
+
+Pipeline de dados **end-to-end** seguindo a **Arquitetura Medalhão** (Landing → Bronze → Silver → Gold),
+com orquestração via **Apache Airflow**. O domínio modelado é o de uma **plataforma de streaming**
+(estilo Twitch), com **13 tabelas** e ~110 mil registros sintéticos gerados com Faker.
+
+> **💡 Diferencial:** infraestrutura **100% self-hosted via Docker** — PostgreSQL (origem),
+> MinIO (data lake S3-compatível), PySpark + Delta Lake (processamento) e Apache Airflow
+> (orquestração). Tudo sobe localmente com `docker compose`.
+
+---
+
+## 🏛️ Arquitetura do Pipeline
 
 ```mermaid
 flowchart LR
-    PG[(PostgreSQL<br/>Origem)] -->|extração| L[Landing<br/>CSV bruto]
-    L --> B[Bronze<br/>Delta / raw]
-    B --> S[Silver<br/>Data Quality]
-    S --> G[Gold<br/>Star Schema]
-    G --> D[[Dashboard]]
-    AF{{Apache Airflow}} -.orquestra.-> L
+    PG[(PostgreSQL<br/>Origem · 13 tabelas)] -->|extração| L[🥉 Landing<br/>CSV bruto]
+    L --> B[🥉 Bronze<br/>Delta / raw]
+    B --> S[🥈 Silver<br/>Data Quality]
+    S --> G[🥇 Gold<br/>Star Schema · Kimball]
+    G --> D[[📊 Dashboard]]
+    AF{{🌀 Apache Airflow<br/>LocalExecutor}} -.orquestra.-> L
     AF -.-> B
     AF -.-> S
     AF -.-> G
+    subgraph LAKE [🗄️ MinIO · Data Lake]
+        L
+        B
+        S
+        G
+    end
 ```
 
-| Camada | Conteúdo | Formato |
-|---|---|---|
-| **Landing** | Dados brutos extraídos da origem | CSV |
-| **Bronze** | Dados crus persistidos no lake | Delta Lake |
-| **Silver** | Dados validados e limpos (Data Quality) | Delta Lake |
-| **Gold** | Tabelas dimensionais/fatos (Ralph Kimball) | Delta Lake |
+Todos os serviços (Postgres, MinIO, Airflow) se comunicam por uma **rede Docker compartilhada
+`datalake`**, e o Airflow já possui *connections* configuradas para o Postgres e o MinIO.
 
-## Stack
+---
 
-| Função | Tecnologia |
-|---|---|
-| Banco de origem | PostgreSQL 15 |
-| Data Lake | MinIO (S3-compatível) |
-| Processamento | PySpark 3.5 + Delta Lake 3.2 |
-| Orquestração | Apache Airflow |
-| Geração de dados | Faker |
-| Dependências | uv (Python 3.12) |
-| Documentação | MkDocs + Material |
+## 🧰 Stack Tecnológica
 
-## Estrutura do projeto
+| Tecnologia | Papel no Projeto |
+|:--|:--|
+| 🐘 **PostgreSQL 15** | Banco de dados de origem (Docker) |
+| 🪣 **MinIO** | Data Lake S3-compatível (camadas landing/bronze/silver/gold) |
+| ⚡ **Apache Spark 3.5** | Motor de processamento distribuído |
+| 🔼 **Delta Lake 3.2** | Armazenamento ACID (Bronze, Silver, Gold) |
+| 🌀 **Apache Airflow 2.9** | Orquestração do pipeline (LocalExecutor) |
+| 🎲 **Faker** | Geração de dados sintéticos |
+| 📦 **uv** | Gerenciador de dependências (Python 3.12) |
+| 📖 **MkDocs Material** | Documentação técnica publicada |
 
-```
-projeto-final-eng-dados/
-├── docker/
-│   ├── docker-compose.yml            # serviço MinIO
-│   └── postgres/docker-compose.yml   # PostgreSQL (inicializa schema.sql)
-├── docs/                             # documentação (MkDocs)
-├── src/
-│   ├── 01_origem/                    # schema.sql + generate_data.py (Faker)
-│   ├── 02_ingestao/                  # extração → Landing/Bronze
-│   ├── 03_transformacao/             # Silver (Data Quality)
-│   ├── 04_modelagem_gold/            # Gold (modelagem Kimball)
-│   ├── 05_orquestracao/              # DAG do Airflow
-│   └── 06_dashboard/                 # visualização
-├── scripts/
-├── tests/
-├── mkdocs.yml
-├── pyproject.toml
-└── uv.lock
-```
+---
 
-## Como rodar
+## 🗄️ Domínio de Dados — Plataforma de Streaming
+
+Banco relacional estilo Twitch com **13 tabelas**. Diagrama ER completo na
+[documentação](https://davinovakoskim-code.github.io/projeto-final-eng-dados/origem/).
+
+| # | Tabela | Papel |
+|--:|:--|:--|
+| 1 | `plataformas` | Plataformas de streaming |
+| 2 | `jogos` | Jogos transmitidos |
+| 3 | `streamers` | Criadores de conteúdo |
+| 4 | `viewers` | Espectadores |
+| 5 | `emotes` | Emotes por streamer |
+| 6 | `transmissoes` | Lives realizadas |
+| 7 | `visualizacoes` | Audiência por transmissão |
+| 8 | `follows` | Relação de follow |
+| 9 | `assinaturas` | Assinaturas (tiers) |
+| 10 | `doacoes` | Doações em lives |
+| 11 | `clips` | Clipes gerados |
+| 12 | `raids` | Raids entre streamers |
+| 13 | `moderadores` | Moderadores de canais |
+
+---
+
+## 🥉🥈🥇 Camadas do Lakehouse
+
+### 🥉 LANDING — Dados Brutos
+- **Formato:** CSV · **Origem:** PostgreSQL · **Destino:** bucket `landing` no MinIO
+- Snapshot exato da fonte, sem transformação.
+
+### 🥉 BRONZE — Ingestão em Delta Lake
+- **Formato:** Delta Lake · **Bucket:** `bronze`
+- Dados crus persistidos com transações ACID e Time Travel.
+
+### 🥈 SILVER — Data Quality
+- **Formato:** Delta Lake · **Bucket:** `silver`
+- Deduplicação, remoção de nulos, padronização e validação de domínios.
+
+### 🥇 GOLD — Modelagem Dimensional (Kimball)
+- **Formato:** Delta Lake · **Bucket:** `gold`
+- Tabelas de dimensão e fato (star schema) prontas para análise.
+
+---
+
+## 🚀 Como Rodar
 
 ### Pré-requisitos
+[Docker](https://docs.docker.com/get-docker/) + Docker Compose · [uv](https://docs.astral.sh/uv/) · Git
 
-- [Docker](https://docs.docker.com/get-docker/) + Docker Compose
-- [uv](https://docs.astral.sh/uv/) (gerencia o Python 3.12 e as dependências)
-- Git
-
-### 1. Clonar e configurar o ambiente
-
+### 1. Clonar e configurar
 ```bash
 git clone https://github.com/davinovakoskim-code/projeto-final-eng-dados.git
 cd projeto-final-eng-dados
-cp .env.example .env
+cp .env.example .env   # preencha POSTGRES_*, DB_* e MINIO_*
 ```
 
-Edite o `.env`. Para rodar **tudo localmente** (Postgres no Docker), use este conjunto:
+> ⚠️ O `generate_data.py` lê as variáveis **`DB_*`**. No modo local, aponte
+> `DB_HOST=localhost` e `DB_PORT=5433`.
 
-```dotenv
-# PostgreSQL local (usado pelo docker-compose)
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=admin
-POSTGRES_DB=origem
-
-# Conexão usada pelo generate_data.py (aponta para o container local)
-DB_HOST=localhost
-DB_PORT=5433
-DB_NAME=origem
-DB_USER=admin
-DB_PASSWORD=admin
-
-# MinIO
-MINIO_ROOT_USER=minioadmin
-MINIO_ROOT_PASSWORD=troque_aqui
-```
-
-> ⚠️ **Atenção:** o `generate_data.py` lê as variáveis **`DB_*`** (não as `POSTGRES_*`).
-> Por isso, no modo local, aponte `DB_HOST=localhost` e `DB_PORT=5433` (a porta exposta
-> pelo container). Alternativamente, é possível usar um PostgreSQL na nuvem (ex.: Supabase)
-> preenchendo apenas o bloco `DB_*`.
-
-### 2. Subir a infraestrutura
-Antes de subir os serviços, crie a rede Docker compartilhada (apenas uma vez):
+### 2. Criar a rede compartilhada (uma vez)
 ```bash
 docker network create datalake
 ```
 
-Essa rede permite que os containers (Postgres, MinIO e, futuramente, Airflow) se comuniquem entre si.
+### 3. Subir a infraestrutura
 ```bash
-# PostgreSQL de origem (cria o schema automaticamente a partir de src/01_origem/schema.sql)
-docker compose -f docker/postgres/docker-compose.yml up -d
-
-# MinIO (console web em http://localhost:9001)
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/postgres/docker-compose.yml up -d   # PostgreSQL (inicializa o schema)
+docker compose -f docker/docker-compose.yml up -d            # MinIO + criação dos buckets
+docker compose -f docker/airflow/docker-compose.yml up -d    # Airflow (UI: http://localhost:8080)
 ```
-> Ao subir, o MinIO cria automaticamente os buckets das camadas da arquitetura Medalhão: `landing`, `bronze`, `silver` e `gold` (via container `createbuckets`, que roda após o MinIO ficar disponível e encerra em seguida). O console web fica em http://localhost:9001 (login com as credenciais do `.env`).
 
-
-### 3. Instalar dependências e gerar os dados
-
+### 4. Dependências e geração de dados
 ```bash
 uv sync
 uv run python src/01_origem/generate_data.py
 ```
 
-Isso popula o banco de origem com ~110 mil registros sintéticos (Faker).
-
-### 4. Etapas do pipeline
-
-As camadas de ingestão, transformação, gold e orquestração estão em desenvolvimento
-(ver *Status* abaixo). Cada etapa será executada a partir de `src/` e, ao final,
-encadeada por uma DAG do Airflow.
-
-## Documentação
-
-A documentação técnica completa é gerada com MkDocs:
-
+### 5. Documentação local
 ```bash
-uv sync --group docs
-uv run mkdocs serve     # http://127.0.0.1:8000
+uv run mkdocs serve   # http://127.0.0.1:8000
 ```
 
-> Site publicado: _a definir após o `mkdocs gh-deploy`._
+---
 
-## Status do pipeline
+## 📊 Status do Projeto
 
-- [x] Origem — schema relacional (13 tabelas) + geração de dados (Faker)
-- [x] Infraestrutura — PostgreSQL + MinIO via Docker Compose, gestão com uv
-- [x] Documentação — MkDocs + Material (estrutura inicial)
-- [ ] Ingestão — Landing → Bronze
-- [ ] Transformação — Silver (Data Quality)
-- [ ] Gold — modelagem dimensional (Kimball)
-- [ ] Orquestração — DAG do Airflow
-- [ ] Dashboard
+- [x] **Origem** — schema relacional (13 tabelas) + geração de dados (Faker)
+- [x] **Infraestrutura** — PostgreSQL + MinIO + buckets + rede `datalake` (uv)
+- [x] **Engine** — Spark + Delta Lake + MinIO (s3a)
+- [x] **Airflow** — LocalExecutor + connections (Postgres + MinIO)
+- [x] **Documentação** — MkDocs + Material (publicada)
+- [ ] **Ingestão** — Landing → Bronze
+- [ ] **Transformação** — Silver (Data Quality)
+- [ ] **Gold** — modelagem dimensional (Kimball)
+- [ ] **Orquestração** — DAG encadeando todas as etapas
+- [ ] **Dashboard**
 
-## Equipe
+---
 
-- [@davinovakoskim-code](https://github.com/davinovakoskim-code)
-- [@CasagrandeVictor](https://github.com/CasagrandeVictor)
-- [@isabelamadeirajose](https://github.com/isabelamadeirajose)
-- [@Isaac-Alexsander](https://github.com/Isaac-Alexsander)
+## 👥 Equipe
 
-## Referências
+| Integrante | GitHub |
+|:--|:--|
+| Davi Novakoski | [@davinovakoskim-code](https://github.com/davinovakoskim-code) |
+| Victor Casagrande | [@CasagrandeVictor](https://github.com/CasagrandeVictor) |
+| Isabela Madeira José | [@isabelamadeirajose](https://github.com/isabelamadeirajose) |
+| Isaac Alexsander | [@Isaac-Alexsander](https://github.com/Isaac-Alexsander) |
 
-Arquitetura Medalhão, Delta Lake, modelagem Kimball, MinIO, Airflow e os repositórios-base
-da disciplina estão reunidos na [página de Referências](docs/referencias.md) da documentação.
+---
+
+<div align="center">
+
+📖 **[Documentação completa →](https://davinovakoskim-code.github.io/projeto-final-eng-dados/)**
+
+*SATC • Engenharia de Software • Engenharia de Dados*
+
+</div>
