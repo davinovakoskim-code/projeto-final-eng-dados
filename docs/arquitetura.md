@@ -34,14 +34,14 @@ flowchart LR
 
 ## Infraestrutura (Docker Compose)
 
-O ambiente sobe localmente com dois serviços principais:
+O ambiente sobe localmente com os seguintes serviços:
 
 | Serviço | Imagem | Portas | Observação |
 |---|---|---|---|
 | `postgres_origem` | postgres:15 | `5433:5432` | Inicializa o `schema.sql` automaticamente |
 | `minio` | minio/minio | `9000` (API), `9001` (console) | Data lake S3-compatível |
-
-> O Airflow será adicionado ao compose na etapa de orquestração (issue **#26**).
+| `airflow` | apache/airflow:2.9 | `8080` | Orquestração do pipeline (LocalExecutor) |
+| `metabase` | metabase/metabase | `3000` | Dashboard (One Page View) |
 
 ## Diagrama Entidade-Relacionamento
 

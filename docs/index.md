@@ -55,6 +55,7 @@ flowchart LR
 | Orquestração | Apache Airflow (LocalExecutor) |
 | Dependências | uv (Python 3.12) |
 | Documentação | MkDocs + Material |
+| Dashboard | Metabase (self-hosted via Docker) |
 
 ## 📊 Progresso
 
@@ -63,11 +64,11 @@ flowchart LR
 - [x] **Engine** — Spark + Delta Lake + MinIO (s3a)
 - [x] **Airflow** — LocalExecutor + connections (Postgres + MinIO)
 - [x] **Documentação** — MkDocs + README
-- [ ] **Ingestão** — Landing → Bronze
-- [ ] **Transformação** — Silver (Data Quality)
-- [ ] **Gold** — modelagem dimensional (Kimball)
-- [ ] **Orquestração** — DAG encadeando as etapas
-- [ ] **Dashboard**
+- [x] **Ingestão** — Landing → Bronze
+- [x] **Transformação** — Silver (Data Quality)
+- [x] **Gold** — modelagem dimensional (Kimball)
+- [x] **Orquestração** — DAG encadeando as etapas
+- [x] **Dashboard** — Metabase (One Page View)
 
 !!! tip "Navegue pela documentação"
     Use as abas no topo: **Arquitetura**, **Camadas do Pipeline** (Origem, Ingestão,
