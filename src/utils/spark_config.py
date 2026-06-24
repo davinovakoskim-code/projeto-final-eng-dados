@@ -2,6 +2,7 @@
 Fabrica de SparkSession configurada para:
   - Delta Lake 3.2.0 (delta-spark)
   - MinIO via protocolo s3a (hadoop-aws 3.3.4 + aws-java-sdk-bundle 1.12.367)
+  - PostgreSQL via JDBC
 
 Uso:
     from utils.spark_config import build_spark_session
@@ -15,10 +16,11 @@ import os
 _DELTA_PACKAGE  = "io.delta:delta-spark_2.12:3.2.0"
 _HADOOP_AWS     = "org.apache.hadoop:hadoop-aws:3.3.4"
 _AWS_SDK_BUNDLE = "com.amazonaws:aws-java-sdk-bundle:1.12.367"
+_POSTGRES_JDBC  = "org.postgresql:postgresql:42.7.3"
 
 # configure_spark_with_delta_pip substitui spark.jars.packages pelo pacote delta;
 # hadoop-aws e aws-sdk-bundle precisam ser passados como extra_packages.
-EXTRA_PACKAGES = [_HADOOP_AWS, _AWS_SDK_BUNDLE]
+EXTRA_PACKAGES = [_HADOOP_AWS, _AWS_SDK_BUNDLE, _POSTGRES_JDBC]
 
 
 def _required_env(name: str) -> str:

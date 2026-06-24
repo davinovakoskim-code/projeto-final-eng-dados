@@ -271,15 +271,26 @@ def build_agg_plataforma_resumo(spark, gold):
     """1 linha por plataforma: visao macro (streamers, audiencia, doacoes).
 
     Doacoes e visualizacoes nao tem FK direta para plataforma; a plataforma e
-    obtida atraves de dim_streamer (sk_streamer -> sk_plataforma).
+    obtida atraves de dim_streamer (sk_streamer -> id_plataforma) e traduzida
+    para a chave substituta em dim_plataforma.
     """
     from pyspark.sql import functions as F
 
     dim_streamer = gold["dim_streamer"].filter(F.col("sk_streamer") != UNKNOWN_SK)
-    streamer_plat = dim_streamer.select("sk_streamer", "sk_plataforma")
+    dim_plat = gold["dim_plataforma"].filter(F.col("sk_plataforma") != UNKNOWN_SK)
+    streamer_plat = (
+        dim_streamer
+        .select("sk_streamer", "id_plataforma")
+        .join(
+            dim_plat.select("sk_plataforma", "id_plataforma"),
+            "id_plataforma",
+            "inner",
+        )
+        .select("sk_streamer", "sk_plataforma")
+    )
 
     qtd_streamers = (
-        dim_streamer.groupBy("sk_plataforma")
+        streamer_plat.groupBy("sk_plataforma")
         .agg(F.count("*").alias("qtd_streamers"))
     )
     doacoes = (
@@ -294,8 +305,6 @@ def build_agg_plataforma_resumo(spark, gold):
         .groupBy("sk_plataforma")
         .agg(F.sum("minutos_assistidos").alias("minutos_assistidos"))
     )
-
-    dim_plat = gold["dim_plataforma"].filter(F.col("sk_plataforma") != UNKNOWN_SK)
     mart = (
         dim_plat.select("sk_plataforma", "nome_plataforma")
         .join(qtd_streamers, "sk_plataforma", "left")
