@@ -15,7 +15,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-origem}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../../src/01_origem/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ../../src/01_origem/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./init_extra_dbs.sql:/docker-entrypoint-initdb.d/02_extra_dbs.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"]
       interval: 10s
