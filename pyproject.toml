@@ -9,6 +9,7 @@ dependencies = [
     "minio==7.2.7",
     "psycopg2-binary==2.9.9",
     "pyspark==3.5.1",
+    "requests==2.34.2",
 ]
 
 [dependency-groups]

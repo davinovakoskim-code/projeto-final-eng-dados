@@ -10,6 +10,7 @@ _BRONZE_TO_SILVER  = "/opt/project/src/03_transformacao/bronze_to_silver.py"
 _SILVER_TO_GOLD    = "/opt/project/src/04_modelagem_gold/silver_to_gold.py"
 _GOLD_AGREGADOS    = "/opt/project/src/04_modelagem_gold/gold_agregados.py"
 _GOLD_TO_POSTGRES  = "/opt/project/src/06_dashboard/gold_to_postgres.py"
+_METABASE_SETUP    = "/opt/project/src/06_dashboard/metabase_setup.py"
 
 # Todas as tabelas do banco de origem (schema.sql).
 _TABLES = (
@@ -80,6 +81,29 @@ with DAG(
         append_env=True,
     )
 
+    # Cria/atualiza a conexao, os cards e o dashboard no Metabase.
+    # Dentro do Docker, o Airflow acessa o Metabase pelo nome do servico.
+    metabase_setup = BashOperator(
+        task_id="metabase_setup",
+        bash_command=f"python {_METABASE_SETUP} --metabase-url http://metabase:3000",
+        env={
+            "METABASE_URL": "http://metabase:3000",
+            "POSTGRES_HOST": "postgres_origem",
+            "POSTGRES_PORT": "5432",
+        },
+        append_env=True,
+    )
+
     fim = EmptyOperator(task_id="fim")
 
-    inicio >> landing >> bronze >> silver >> gold_star >> gold_marts >> gold_to_postgres >> fim
+    (
+        inicio
+        >> landing
+        >> bronze
+        >> silver
+        >> gold_star
+        >> gold_marts
+        >> gold_to_postgres
+        >> metabase_setup
+        >> fim
+    )

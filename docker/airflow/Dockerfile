@@ -16,7 +16,8 @@ RUN pip install --no-cache-dir \
     delta-spark==3.2.0 \
     minio==7.2.7 \
     psycopg2-binary==2.9.9 \
-    python-dotenv
+    python-dotenv \
+    requests==2.34.2
 
 # Pré-aquece o cache Ivy2 durante o build para que os JARs do Spark
 # (delta-spark, hadoop-aws, aws-sdk-bundle) não precisem ser baixados
