@@ -6,7 +6,7 @@ services:
       - ../.env
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
+      - "9100:9000"
       - "9001:9001"
     volumes:
       - minio_data:/data
