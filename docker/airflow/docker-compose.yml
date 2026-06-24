@@ -2,17 +2,10 @@ version: "3.8"
 
 x-airflow-common: &airflow-common
   build:
-    context: .
-  image: projeto-eng-dados/airflow:2.9.3
+    context: ../../
+    dockerfile: docker/airflow/Dockerfile
   env_file:
     - ../../.env
-  # Acesso ao socket do Docker para que as DAGs disparem `docker exec jupyter_spark`.
-  # group_add "0" (grupo root) cobre o caso comum em que o socket e root:root 660
-  # (Docker Desktop). Em hosts Linux com socket root:docker, defina DOCKER_GID com
-  # o gid do grupo `docker` do host (ex.: `getent group docker | cut -d: -f3`).
-  group_add:
-    - "0"
-    - "${DOCKER_GID:-0}"
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow_metadata
@@ -21,12 +14,12 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
     AIRFLOW_CONN_POSTGRES_ORIGEM: "postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@postgres_origem:5432/${POSTGRES_DB:-origem}"
-    AIRFLOW_CONN_MINIO_DEFAULT: "aws://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@?endpoint_url=http%3A%2F%2Fminio%3A9000"   
+    AIRFLOW_CONN_MINIO_DEFAULT: "aws://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@?endpoint_url=http%3A%2F%2Fminio%3A9000"
+    PYTHONPATH: /opt/project/src
   volumes:
     - ../../src/05_orquestracao:/opt/airflow/dags
+    - ../../src:/opt/project/src
     - airflow_logs:/opt/airflow/logs
-    # Socket do Docker do host: permite `docker exec jupyter_spark ...` nas DAGs.
-    - /var/run/docker.sock:/var/run/docker.sock
   networks:
     - datalake
   depends_on:

@@ -8,20 +8,21 @@ DAGs que orquestram a pipeline do data lake medalhao.
 
 ## Como o Airflow executa os jobs
 
-O Spark (PySpark + Delta + jars + acesso s3a ao MinIO) vive no container
-**`jupyter_spark`**, com o projeto montado em `/home/jovyan/work`. A imagem do
-Airflow **nao tem Spark** — ela apenas **orquestra**. Cada task dispara o script
-Python correspondente **dentro do `jupyter_spark`** via `docker exec`:
+A imagem do Airflow (`docker/airflow/Dockerfile`) ja traz **Java + PySpark + Delta**,
+e o compose monta o projeto em **`/opt/project/src`** com `PYTHONPATH` apontando para
+la. Cada task executa o script Python correspondente **dentro do proprio container do
+Airflow**:
 
 ```
-docker exec jupyter_spark python /home/jovyan/work/src/04_modelagem_gold/silver_to_gold.py
-docker exec jupyter_spark python /home/jovyan/work/src/04_modelagem_gold/gold_agregados.py
+python /opt/project/src/04_modelagem_gold/silver_to_gold.py
+python /opt/project/src/04_modelagem_gold/gold_agregados.py
 ```
 
 E o mesmo comando documentado para execucao manual — o Airflow so o encadeia, com
 retries e dependencia (`silver_to_gold >> gold_agregados`). As credenciais do MinIO
-ja estao no ambiente do `jupyter_spark` (carregadas do `.env`), entao o `exec` as
-herda automaticamente.
+vem do `.env` (`env_file`), entao `build_spark_session` (em `utils.spark_config`) as
+encontra no ambiente. Os jars do Delta/s3a sao baixados sob demanda via
+`spark.jars.packages` na primeira execucao.
 
 ```mermaid
 flowchart LR
@@ -31,14 +32,13 @@ flowchart LR
 ## Pre-requisitos
 
 - Rede Docker externa `datalake` criada: `docker network create datalake`.
-- Stack principal no ar (MinIO + jupyter_spark): `docker compose -f docker/docker-compose.yml up -d`.
+- Stack principal no ar (MinIO): `docker compose -f docker/docker-compose.yml up -d`.
 - **Silver populada** (rode `bronze_to_silver.py` antes; veja `src/03_transformacao/`).
 
 ## Subir o Airflow
 
-A imagem do Airflow e customizada (`docker/airflow/Dockerfile`) para incluir o
-**Docker CLI**, e o compose monta o **socket do Docker** do host para permitir o
-`docker exec`.
+A imagem do Airflow e customizada (`docker/airflow/Dockerfile`) para incluir
+**Java, PySpark e Delta**, de modo que o proprio container roda o Spark.
 
 ```bash
 docker compose -f docker/airflow/docker-compose.yml up -d --build
@@ -47,26 +47,17 @@ docker compose -f docker/airflow/docker-compose.yml up -d --build
 Acesse `http://localhost:8080` (admin / admin), ative a DAG **`gold_pipeline`** e
 dispare (Trigger). A DAG nasce pausada (`DAGS_ARE_PAUSED_AT_CREATION=true`).
 
-### Permissao do socket do Docker
-
-O acesso ao `/var/run/docker.sock` exige que o usuario do Airflow esteja no grupo
-dono do socket:
-
-- **Docker Desktop (Windows/macOS)** — socket normalmente `root:root`; o
-  `group_add: ["0"]` ja resolve. Nada a fazer.
-- **Host Linux** — socket geralmente `root:docker`. Descubra o gid e exporte antes
-  do `up`:
-
-  ```bash
-  export DOCKER_GID=$(getent group docker | cut -d: -f3)
-  docker compose -f docker/airflow/docker-compose.yml up -d --build
-  ```
-
 ## Execucao manual (sem Airflow)
 
 ```bash
+docker exec airflow_scheduler python /opt/project/src/04_modelagem_gold/silver_to_gold.py
+docker exec airflow_scheduler python /opt/project/src/04_modelagem_gold/gold_agregados.py
+```
+
+Ou, alternativamente, dentro do container `jupyter_spark` (que tambem tem Spark):
+
+```bash
 docker exec jupyter_spark python /home/jovyan/work/src/04_modelagem_gold/silver_to_gold.py
-docker exec jupyter_spark python /home/jovyan/work/src/04_modelagem_gold/gold_agregados.py
 ```
 
 ## Proximos passos
