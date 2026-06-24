@@ -16,7 +16,9 @@ _DELTA_PACKAGE  = "io.delta:delta-spark_2.12:3.2.0"
 _HADOOP_AWS     = "org.apache.hadoop:hadoop-aws:3.3.4"
 _AWS_SDK_BUNDLE = "com.amazonaws:aws-java-sdk-bundle:1.12.367"
 
-SPARK_PACKAGES = ",".join([_DELTA_PACKAGE, _HADOOP_AWS, _AWS_SDK_BUNDLE])
+# configure_spark_with_delta_pip substitui spark.jars.packages pelo pacote delta;
+# hadoop-aws e aws-sdk-bundle precisam ser passados como extra_packages.
+EXTRA_PACKAGES = [_HADOOP_AWS, _AWS_SDK_BUNDLE]
 
 
 def _required_env(name: str) -> str:
@@ -52,9 +54,7 @@ def build_spark_session(app_name: str = "projeto-eng-dados"):
     builder = (
         SparkSession.builder
         .appName(app_name)
-        # JARs via Maven
-        .config("spark.jars.packages", SPARK_PACKAGES)
-        # Delta Lake
+        # Delta Lake extensions (também definidas por configure_spark_with_delta_pip)
         .config("spark.sql.extensions",
                 "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
@@ -74,6 +74,8 @@ def build_spark_session(app_name: str = "projeto-eng-dados"):
         .config("spark.sql.shuffle.partitions", "4")
     )
 
-    spark = configure_spark_with_delta_pip(builder).getOrCreate()
+    spark = configure_spark_with_delta_pip(
+        builder, extra_packages=EXTRA_PACKAGES
+    ).getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     return spark
