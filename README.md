@@ -72,6 +72,7 @@ Todos os serviços (Postgres, MinIO, Airflow) se comunicam por uma **rede Docker
 | 🌀 **Apache Airflow 2.9** | Orquestração do pipeline (LocalExecutor) |
 | 🎲 **Faker** | Geração de dados sintéticos |
 | 📦 **uv** | Gerenciador de dependências (Python 3.12) |
+| 📊 **Metabase** | Dashboard (One Page View, self-hosted via Docker) |
 | 📖 **MkDocs Material** | Documentação técnica publicada |
 
 ---
@@ -142,7 +143,7 @@ docker network create datalake
 ### 3. Subir a infraestrutura
 ```bash
 docker compose -f docker/postgres/docker-compose.yml up -d   # PostgreSQL (inicializa o schema)
-docker compose -f docker/docker-compose.yml up -d            # MinIO + criação dos buckets
+docker compose -f docker/docker-compose.yml up -d            # MinIO + criação dos buckets + Jupyter + Metabase
 docker compose -f docker/airflow/docker-compose.yml up -d    # Airflow (UI: http://localhost:8080)
 ```
 
@@ -166,11 +167,11 @@ uv run mkdocs serve   # http://127.0.0.1:8000
 - [x] **Engine** — Spark + Delta Lake + MinIO (s3a)
 - [x] **Airflow** — LocalExecutor + connections (Postgres + MinIO)
 - [x] **Documentação** — MkDocs + Material (publicada)
-- [ ] **Ingestão** — Landing → Bronze
-- [ ] **Transformação** — Silver (Data Quality)
-- [ ] **Gold** — modelagem dimensional (Kimball)
-- [ ] **Orquestração** — DAG encadeando todas as etapas
-- [ ] **Dashboard**
+- [x] **Ingestão** — Landing → Bronze
+- [x] **Transformação** — Silver (Data Quality)
+- [x] **Gold** — modelagem dimensional (Kimball)
+- [x] **Orquestração** — DAG encadeando todas as etapas
+- [x] **Dashboard** — Metabase (One Page View)
 
 ---
 
@@ -182,6 +183,7 @@ uv run mkdocs serve   # http://127.0.0.1:8000
 | Victor Casagrande | [@CasagrandeVictor](https://github.com/CasagrandeVictor) |
 | Isabela Madeira José | [@isabelamadeirajose](https://github.com/isabelamadeirajose) |
 | Isaac Alexsander | [@Isaac-Alexsander](https://github.com/Isaac-Alexsander) |
+| Vitor Baschirotto | [@vitorbaschirotto10-debug](https://github.com/vitorbaschirotto10-debug) |
 
 ---
 
