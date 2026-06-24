@@ -1,7 +1,7 @@
 # Origem — Banco Relacional
 
 A fonte de dados é um banco **PostgreSQL** que modela uma plataforma de streaming
-(estilo Twitch), com **13 tabelas** e cerca de **110 mil registros** gerados com Faker.
+(estilo Twitch), com **13 tabelas** e cerca de **100 mil registros** gerados com Faker.
 
 ## Modelo Entidade-Relacionamento
 
@@ -148,6 +148,8 @@ A fonte de dados é um banco **PostgreSQL** que modela uma plataforma de streami
 
 | Entidade | Registros |
 |---|--:|
+| plataformas | 5 |
+| jogos | 20 |
 | streamers | 10.000 |
 | viewers | 16.975 |
 | emotes | 1.000 |
@@ -159,6 +161,7 @@ A fonte de dados é um banco **PostgreSQL** que modela uma plataforma de streami
 | clips | 10.000 |
 | raids | 10.000 |
 | moderadores | 2.000 |
+| **TOTAL** | **100.000** |
 
 ## Schema (DDL real do projeto)
 

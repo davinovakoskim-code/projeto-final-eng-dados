@@ -27,7 +27,7 @@
 
 Pipeline de dados **end-to-end** seguindo a **Arquitetura Medalhão** (Landing → Bronze → Silver → Gold),
 com orquestração via **Apache Airflow**. O domínio modelado é o de uma **plataforma de streaming**
-(estilo Twitch), com **13 tabelas** e ~110 mil registros sintéticos gerados com Faker.
+(estilo Twitch), com **13 tabelas** e ~100 mil registros sintéticos gerados com Faker.
 
 > **💡 Diferencial:** infraestrutura **100% self-hosted via Docker** — PostgreSQL (origem),
 > MinIO (data lake S3-compatível), PySpark + Delta Lake (processamento) e Apache Airflow
