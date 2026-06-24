@@ -157,7 +157,30 @@ uv run python src/01_origem/generate_data.py
 ```bash
 uv run mkdocs serve   # http://127.0.0.1:8000
 ```
+---
+## 📁 Estrutura do Projeto
 
+```
+projeto-final-eng-dados/
+├── docker/
+│   ├── airflow/           # Dockerfile + compose do Airflow
+│   ├── jupyter/           # Dockerfile do Jupyter + Spark
+│   ├── postgres/          # Compose + init_extra_dbs.sql
+│   └── docker-compose.yml # MinIO + Jupyter + Metabase
+├── docs/                  # Documentação MkDocs
+├── notebooks/             # Notebooks exploratórios
+├── src/
+│   ├── 01_origem/         # schema.sql + generate_data.py
+│   ├── 02_ingestao/       # ingestao_postgres.py (Landing)
+│   ├── 03_transformacao/  # landing_to_bronze + bronze_to_silver
+│   ├── 04_modelagem_gold/ # silver_to_gold + gold_agregados
+│   ├── 05_orquestracao/   # pipeline_medallion_dag.py
+│   ├── 06_dashboard/      # gold_to_postgres + metabase_setup
+│   └── utils/             # spark_config
+├── .env.example
+├── pyproject.toml
+└── mkdocs.yml
+```
 ---
 
 ## 📊 Status do Projeto
@@ -175,6 +198,26 @@ uv run mkdocs serve   # http://127.0.0.1:8000
 
 ---
 
+## 🔖 Versão
+
+`v1.0.0` — Entrega final · Junho/2026
+
+O versionamento do projeto é feito via **Git**, com todas as alterações passando por **Pull Requests** e aprovação antes do merge na branch `main`.
+
+### Versões das tecnologias
+
+| Tecnologia | Versão |
+|:--|:--|
+| Python | 3.11+ |
+| Apache Spark | 3.5.1 |
+| Delta Lake | 3.2.0 |
+| Apache Airflow | 2.9.3 |
+| PostgreSQL | 15 |
+| Faker | 25.2.0 |
+| MkDocs Material | 9.7.6+ |
+
+---
+
 ## 👥 Equipe
 
 | Integrante | GitHub |
@@ -184,6 +227,24 @@ uv run mkdocs serve   # http://127.0.0.1:8000
 | Isabela Madeira José | [@isabelamadeirajose](https://github.com/isabelamadeirajose) |
 | Isaac Alexsander | [@Isaac-Alexsander](https://github.com/Isaac-Alexsander) |
 | Vitor Baschirotto | [@vitorbaschirotto10-debug](https://github.com/vitorbaschirotto10-debug) |
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT — veja o arquivo [LICENSE](LICENSE) para detalhes.  
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+---
+
+## 📚 Referências
+
+- [Medallion Architecture — Databricks](https://www.databricks.com/glossary/medallion-architecture)
+- [Delta Lake — Documentação](https://docs.delta.io/latest/index.html)
+- [The Data Warehouse Toolkit — Ralph Kimball](https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/)
+- Repositórios-base do professor: [spark-delta](https://github.com/jlsilva01/spark-delta) · [spark-iceberg](https://github.com/jlsilva01/spark-iceberg) · [spark-delta-minio-sqlserver](https://github.com/jlsilva01/spark-delta-minio-sqlserver)
+- [Apache Airflow](https://airflow.apache.org/docs/) · [MinIO](https://min.io/docs/minio/container/index.html) · [PySpark](https://spark.apache.org/docs/latest/api/python/index.html)
+- [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) · [Docker Compose](https://docs.docker.com/compose/) · [Faker](https://faker.readthedocs.io/)
 
 ---
 
