@@ -62,22 +62,84 @@ flowchart LR
 
 ## KPIs e métricas (One Page View)
 
-Os indicadores que o dashboard vai apresentar (issues #30 e #34):
+Os 4 KPIs do dashboard batem com os marts exportados para `gold_analytics`. As queries
+completas estão em [`src/06_dashboard/kpis_queries.sql`](../src/06_dashboard/kpis_queries.sql).
 
-**KPIs (cards):**
+### KPI 1 — Receita Total
 
-1. **Faturamento total** — soma da receita (doações + assinaturas) + variação % vs. período anterior.
-2. **Ticket médio** — faturamento / nº de pedidos (doações).
-3. **Número de pedidos** — contagem de doações + tendência mensal (3 anos).
-4. **Clientes ativos** — contagem distinta de viewers com doação/assinatura no período.
+Soma de doações + assinaturas de todo o período, com comparação % vs. mês anterior.
 
-**Métricas (gráficos):**
+- **Fonte:** `gold_analytics.agg_receita_mensal`
+- **Coluna:** `receita_total` (= `receita_doacoes` + `receita_assinaturas`)
+- **Card Metabase:** *Metric* → `SUM(receita_total)` → ativar "Compare to previous period"
 
-1. **Faturamento por categoria/produto** — barras (top jogos/streamers por receita).
-2. **Faturamento por região/canal** — barras por dimensão geográfica (`pais`) ou plataforma.
+```sql
+SELECT ROUND(SUM(receita_total), 2) AS receita_total_global
+FROM gold_analytics.agg_receita_mensal;
+```
 
-As consultas-base estão em
-[`src/04_modelagem_gold/consultas_analiticas.sql`](https://github.com/davinovakoskim-code/projeto-final-eng-dados/blob/main/src/04_modelagem_gold/consultas_analiticas.sql).
+### KPI 2 — Valor Médio por Doação
+
+Receita de doações dividida pelo número de doações (ticket médio das doações).
+
+- **Fonte:** `gold_analytics.agg_receita_mensal`
+- **Colunas:** `receita_doacoes`, `qtd_doacoes`
+- **Card Metabase:** *Native query* com a SQL abaixo → exibir como número
+
+```sql
+SELECT
+    ROUND(
+        SUM(receita_doacoes) / NULLIF(SUM(qtd_doacoes), 0),
+        2
+    ) AS valor_medio_por_doacao
+FROM gold_analytics.agg_receita_mensal
+WHERE qtd_doacoes > 0;
+```
+
+### KPI 3 — Número de Transmissões
+
+Contagem total de transmissões em todo o período.
+
+- **Fonte:** `gold_analytics.agg_streamer_visao_geral`
+- **Coluna:** `qtd_transmissoes`
+- **Card Metabase:** *Metric* → `SUM(qtd_transmissoes)` → pode usar "Compare to previous period"
+
+```sql
+SELECT SUM(qtd_transmissoes) AS total_transmissoes
+FROM gold_analytics.agg_streamer_visao_geral;
+```
+
+Para gráfico de tendência (top streamers por transmissões):
+
+```sql
+SELECT nome_streamer, nome_plataforma, qtd_transmissoes, horas_transmitidas
+FROM gold_analytics.agg_streamer_visao_geral
+WHERE qtd_transmissoes > 0
+ORDER BY qtd_transmissoes DESC
+LIMIT 10;
+```
+
+### KPI 4 — Viewers Ativos
+
+Contagem de viewers únicos com visualização registrada no período.
+
+- **Fonte:** `gold_analytics.agg_streamer_visao_geral`
+- **Coluna:** `viewers_unicos`
+- **Card Metabase:** *Metric* → `SUM(viewers_unicos)`
+
+```sql
+SELECT SUM(viewers_unicos) AS viewers_ativos_total
+FROM gold_analytics.agg_streamer_visao_geral
+WHERE viewers_unicos > 0;
+```
+
+**Métricas (gráficos — issues #34):**
+
+1. **Receita por plataforma** — barras por `nome_plataforma` (`agg_plataforma_resumo.total_doacoes + mrr`).
+2. **Top jogos por transmissões** — barras horizontais (`agg_jogo_popularidade.qtd_transmissoes`).
+
+As consultas adicionais estão em
+[`src/04_modelagem_gold/consultas_analiticas.sql`](../src/04_modelagem_gold/consultas_analiticas.sql).
 
 ## Código
 
@@ -131,23 +193,51 @@ O pipeline encadeia todas as etapas:
 inicio → landing → bronze → silver → gold_star → gold_marts → gold_to_postgres → fim
 ```
 
-### Como subir o Metabase
+### Como subir e configurar o Metabase
 
 ```bash
-# 1. (Re)criar o postgres_origem com o database metabase criado
+# 1. Subir o stack completo
 docker compose -f docker/postgres/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml up -d
 
-# 2. Subir MinIO + Metabase
-docker compose -f docker/docker-compose.yml up -d metabase
+# 2. Acessar http://localhost:3000 e completar o setup inicial (uma vez só)
+#    Criar conta admin com as credenciais do .env:
+#      Email:  METABASE_USER    (ex: admin@datalake.local)
+#      Senha:  METABASE_PASSWORD (ex: admin1234)
 
-# 3. Acessar e configurar
-#    http://localhost:3000 → Setup → Add database → PostgreSQL
-#    Host: postgres_origem | Port: 5432 | Database: origem
-#    Schema: gold_analytics | User/Password: conforme .env
+# 3. Rodar a DAG completa no Airflow para popular gold_analytics
+#    http://localhost:8080 → pipeline_medallion → Trigger DAG
+
+# 4. Criar conexão, KPIs e dashboard automaticamente
+python src/06_dashboard/metabase_setup.py
 ```
 
-### Validar a conexão
+O script `metabase_setup.py` é **idempotente** — pode ser executado várias
+vezes sem duplicar recursos. Em qualquer máquina que clonar o repositório,
+basta subir o stack, rodar a DAG e executar o script para ter o dashboard completo.
 
-Após rodar a DAG completa, o schema `gold_analytics` terá 4 tabelas.
-No Metabase, em *Browse data → gold_analytics*, os marts devem aparecer
-com linhas prontas para construir os cards e gráficos (issues #30 e #34).
+### Variáveis de ambiente do setup
+
+| Variável | Default | Descrição |
+|---|---|---|
+| `METABASE_URL` | `http://localhost:3000` | URL base do Metabase |
+| `METABASE_USER` | `admin@datalake.local` | E-mail do admin criado no setup inicial |
+| `METABASE_PASSWORD` | `admin1234` | Senha do admin |
+| `POSTGRES_HOST` | `localhost` | Host do Postgres (no host: `localhost`) |
+| `POSTGRES_PORT` | `5433` | Porta mapeada do Postgres no host |
+| `POSTGRES_USER` | `admin` | Usuário do Postgres |
+| `POSTGRES_PASSWORD` | `admin` | Senha do Postgres |
+| `POSTGRES_DB` | `origem` | Database do Postgres |
+
+### O que o script cria
+
+| Recurso | Detalhes |
+|---|---|
+| Conexão Postgres | Aponta para `gold_analytics` schema |
+| KPI 1 — Receita Total | `SUM(receita_total)` de `agg_receita_mensal` |
+| KPI 2 — Valor Médio por Doação | `receita_doacoes / qtd_doacoes` |
+| KPI 3 — Total de Transmissões | `SUM(qtd_transmissoes)` de `agg_streamer_visao_geral` |
+| KPI 4 — Viewers Ativos | `SUM(viewers_unicos)` |
+| Métrica 1 — Receita por Plataforma | Barras horizontais por `nome_plataforma` |
+| Métrica 2 — Top 10 Jogos | Barras horizontais por `qtd_transmissoes` |
+| Dashboard One Page View | Todos os cards organizados em grid 24 colunas |
