@@ -62,22 +62,84 @@ flowchart LR
 
 ## KPIs e métricas (One Page View)
 
-Os indicadores que o dashboard vai apresentar (issues #30 e #34):
+Os 4 KPIs do dashboard batem com os marts exportados para `gold_analytics`. As queries
+completas estão em [`src/06_dashboard/kpis_queries.sql`](../src/06_dashboard/kpis_queries.sql).
 
-**KPIs (cards):**
+### KPI 1 — Receita Total
 
-1. **Faturamento total** — soma da receita (doações + assinaturas) + variação % vs. período anterior.
-2. **Ticket médio** — faturamento / nº de pedidos (doações).
-3. **Número de pedidos** — contagem de doações + tendência mensal (3 anos).
-4. **Clientes ativos** — contagem distinta de viewers com doação/assinatura no período.
+Soma de doações + assinaturas de todo o período, com comparação % vs. mês anterior.
 
-**Métricas (gráficos):**
+- **Fonte:** `gold_analytics.agg_receita_mensal`
+- **Coluna:** `receita_total` (= `receita_doacoes` + `receita_assinaturas`)
+- **Card Metabase:** *Metric* → `SUM(receita_total)` → ativar "Compare to previous period"
 
-1. **Faturamento por categoria/produto** — barras (top jogos/streamers por receita).
-2. **Faturamento por região/canal** — barras por dimensão geográfica (`pais`) ou plataforma.
+```sql
+SELECT ROUND(SUM(receita_total), 2) AS receita_total_global
+FROM gold_analytics.agg_receita_mensal;
+```
 
-As consultas-base estão em
-[`src/04_modelagem_gold/consultas_analiticas.sql`](https://github.com/davinovakoskim-code/projeto-final-eng-dados/blob/main/src/04_modelagem_gold/consultas_analiticas.sql).
+### KPI 2 — Valor Médio por Doação
+
+Receita de doações dividida pelo número de doações (ticket médio das doações).
+
+- **Fonte:** `gold_analytics.agg_receita_mensal`
+- **Colunas:** `receita_doacoes`, `qtd_doacoes`
+- **Card Metabase:** *Native query* com a SQL abaixo → exibir como número
+
+```sql
+SELECT
+    ROUND(
+        SUM(receita_doacoes) / NULLIF(SUM(qtd_doacoes), 0),
+        2
+    ) AS valor_medio_por_doacao
+FROM gold_analytics.agg_receita_mensal
+WHERE qtd_doacoes > 0;
+```
+
+### KPI 3 — Número de Transmissões
+
+Contagem total de transmissões em todo o período.
+
+- **Fonte:** `gold_analytics.agg_streamer_visao_geral`
+- **Coluna:** `qtd_transmissoes`
+- **Card Metabase:** *Metric* → `SUM(qtd_transmissoes)` → pode usar "Compare to previous period"
+
+```sql
+SELECT SUM(qtd_transmissoes) AS total_transmissoes
+FROM gold_analytics.agg_streamer_visao_geral;
+```
+
+Para gráfico de tendência (top streamers por transmissões):
+
+```sql
+SELECT nome_streamer, nome_plataforma, qtd_transmissoes, horas_transmitidas
+FROM gold_analytics.agg_streamer_visao_geral
+WHERE qtd_transmissoes > 0
+ORDER BY qtd_transmissoes DESC
+LIMIT 10;
+```
+
+### KPI 4 — Viewers Ativos
+
+Contagem de viewers únicos com visualização registrada no período.
+
+- **Fonte:** `gold_analytics.agg_streamer_visao_geral`
+- **Coluna:** `viewers_unicos`
+- **Card Metabase:** *Metric* → `SUM(viewers_unicos)`
+
+```sql
+SELECT SUM(viewers_unicos) AS viewers_ativos_total
+FROM gold_analytics.agg_streamer_visao_geral
+WHERE viewers_unicos > 0;
+```
+
+**Métricas (gráficos — issues #34):**
+
+1. **Receita por plataforma** — barras por `nome_plataforma` (`agg_plataforma_resumo.total_doacoes + mrr`).
+2. **Top jogos por transmissões** — barras horizontais (`agg_jogo_popularidade.qtd_transmissoes`).
+
+As consultas adicionais estão em
+[`src/04_modelagem_gold/consultas_analiticas.sql`](../src/04_modelagem_gold/consultas_analiticas.sql).
 
 ## Código
 
