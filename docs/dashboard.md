@@ -63,7 +63,7 @@ flowchart LR
 ## KPIs e métricas (One Page View)
 
 Os 4 KPIs do dashboard batem com os marts exportados para `gold_analytics`. As queries
-completas estão em [`src/06_dashboard/kpis_queries.sql`](../src/06_dashboard/kpis_queries.sql).
+completas estão em [`src/06_dashboard/kpis_queries.sql`](https://github.com/davinovakoskim-code/projeto-final-eng-dados/blob/main/src/06_dashboard/kpis_queries.sql).
 
 ### KPI 1 — Receita Total
 
@@ -138,8 +138,11 @@ WHERE viewers_unicos > 0;
 1. **Receita por plataforma** — barras por `nome_plataforma` (`agg_plataforma_resumo.total_doacoes + mrr`).
 2. **Top jogos por transmissões** — barras horizontais (`agg_jogo_popularidade.qtd_transmissoes`).
 
-As consultas adicionais estão em
-[`src/04_modelagem_gold/consultas_analiticas.sql`](../src/04_modelagem_gold/consultas_analiticas.sql).
+As consultas adicionais estão em `src/04_modelagem_gold/consultas_analiticas.sql`, embutidas abaixo:
+
+```sql
+--8<-- "src/04_modelagem_gold/consultas_analiticas.sql"
+```
 
 ## Código
 
