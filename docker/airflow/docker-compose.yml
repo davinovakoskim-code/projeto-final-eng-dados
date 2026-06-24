@@ -1,7 +1,9 @@
 version: "3.8"
 
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.9.3
+  build:
+    context: ../../
+    dockerfile: docker/airflow/Dockerfile
   env_file:
     - ../../.env
   environment:
@@ -12,9 +14,11 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
     AIRFLOW_CONN_POSTGRES_ORIGEM: "postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin}@postgres_origem:5432/${POSTGRES_DB:-origem}"
-    AIRFLOW_CONN_MINIO_DEFAULT: "aws://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@?endpoint_url=http%3A%2F%2Fminio%3A9000"   
+    AIRFLOW_CONN_MINIO_DEFAULT: "aws://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@?endpoint_url=http%3A%2F%2Fminio%3A9000"
+    PYTHONPATH: /opt/project/src
   volumes:
     - ../../src/05_orquestracao:/opt/airflow/dags
+    - ../../src:/opt/project/src
     - airflow_logs:/opt/airflow/logs
   networks:
     - datalake
