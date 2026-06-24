@@ -2,8 +2,9 @@
 Cria automaticamente a conexao, os cards de KPI/metricas e o dashboard
 One Page View no Metabase via API REST.
 
-Idempotente: verifica se cada recurso ja existe antes de criar.
-Roda apos o stack Docker estar de pe e a DAG ter populado gold_analytics.
+Idempotente: executa o setup inicial do Metabase quando necessario e verifica
+se cada recurso ja existe antes de criar. Roda apos o stack Docker estar de pe
+e a DAG ter populado gold_analytics.
 
 Uso:
     python src/06_dashboard/metabase_setup.py
@@ -231,6 +232,45 @@ class MetabaseClient:
         except Exception:
             return False
 
+    def setup_token(self) -> str | None:
+        """Retorna o token de setup inicial, se a instancia ainda nao foi criada."""
+        resp = self.get("/session/properties")
+        return resp.get("setup-token")
+
+    def complete_initial_setup(self, email: str, password: str) -> None:
+        """Cria o usuario admin inicial do Metabase quando ha setup-token."""
+        token = self.setup_token()
+        if not token:
+            print("  Setup inicial do Metabase ja realizado.")
+            return
+
+        payload = {
+            "token": token,
+            "user": {
+                "first_name": "Admin",
+                "last_name": "Datalake",
+                "email": email,
+                "password": password,
+            },
+            "prefs": {
+                "site_name": "Streaming Analytics",
+                "site_locale": "pt_BR",
+                "allow_tracking": False,
+            },
+        }
+        try:
+            resp = self.post("/setup", payload)
+        except requests.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status == 403:
+                print("  Setup inicial ja foi realizado; seguindo para login.")
+                return
+            raise
+        session_token = resp.get("id")
+        if session_token:
+            self.session.headers["X-Metabase-Session"] = session_token
+        print("  Setup inicial do Metabase concluido.")
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -374,12 +414,8 @@ def run(metabase_url: str) -> None:
     client = MetabaseClient(METABASE_URL)
 
     if not client.setup_status():
-        print(
-            "\nO Metabase ainda nao passou pelo setup inicial.\n"
-            "Acesse http://localhost:3000, complete o cadastro de admin e\n"
-            "execute este script novamente.\n"
-        )
-        sys.exit(1)
+        print("Executando setup inicial do Metabase ...")
+        client.complete_initial_setup(METABASE_USER, METABASE_PASSWORD)
 
     print("Autenticando ...")
     client.authenticate(METABASE_USER, METABASE_PASSWORD)

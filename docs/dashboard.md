@@ -190,7 +190,7 @@ df.write
 O pipeline encadeia todas as etapas:
 
 ```
-inicio → landing → bronze → silver → gold_star → gold_marts → gold_to_postgres → fim
+inicio → landing → bronze → silver → gold_star → gold_marts → gold_to_postgres → metabase_setup → fim
 ```
 
 ### Como subir e configurar o Metabase
@@ -200,21 +200,18 @@ inicio → landing → bronze → silver → gold_star → gold_marts → gold_t
 docker compose -f docker/postgres/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml up -d
 
-# 2. Acessar http://localhost:3000 e completar o setup inicial (uma vez só)
-#    Criar conta admin com as credenciais do .env:
-#      Email:  METABASE_USER    (ex: admin@datalake.local)
-#      Senha:  METABASE_PASSWORD (ex: admin1234)
+# 2. O setup inicial do Metabase sera feito automaticamente pela DAG
+#    usando METABASE_USER/METABASE_PASSWORD do .env ou os defaults documentados abaixo
 
 # 3. Rodar a DAG completa no Airflow para popular gold_analytics
+#    e criar/atualizar a conexao, os KPIs e o dashboard no Metabase
 #    http://localhost:8080 → pipeline_medallion → Trigger DAG
-
-# 4. Criar conexão, KPIs e dashboard automaticamente
-python src/06_dashboard/metabase_setup.py
 ```
 
-O script `metabase_setup.py` é **idempotente** — pode ser executado várias
-vezes sem duplicar recursos. Em qualquer máquina que clonar o repositório,
-basta subir o stack, rodar a DAG e executar o script para ter o dashboard completo.
+A task `metabase_setup` roda o script `src/06_dashboard/metabase_setup.py`.
+Ele é **idempotente** — faz o setup inicial quando necessario e pode ser
+executado varias vezes sem duplicar recursos. Em qualquer maquina que clonar o
+repositorio, basta subir o stack e rodar a DAG para ter o dashboard completo.
 
 ### Variáveis de ambiente do setup
 
